@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('내 평가')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 내 업무</nav>
+    <h1 class="h3">내 평가</h1>
+    <p class="text-secondary">내가 평가자인 PM·동료 평가입니다. 프로젝트가 끝나면 '작성중' 평가가 만들어집니다.</p>
+
+    <div class="alert alert-light border" th:if="${evaluations.isEmpty()}">내가 평가자인 평가가 없습니다.</div>
+
+    <table class="table table-hover align-middle" th:unless="${evaluations.isEmpty()}">
+        <thead class="table-light">
+        <tr>
+            <th>평가</th>
+            <th>프로젝트</th>
+            <th>피평가자</th>
+            <th>구분</th>
+            <th>상태</th>
+            <th>문항 입력</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="e : ${evaluations}">
+            <td class="text-secondary" th:text="${e.evalId}">1</td>
+            <td>
+                <div th:text="${e.prjNm}">프로젝트명</div>
+                <div class="small text-secondary" th:text="${e.prjId}">P26-000</div>
+            </td>
+            <td>
+                <span th:text="${e.evlteEmpNm}">이름</span>
+                <span class="small text-secondary" th:text="${e.evlteEmpId}">직원ID</span>
+            </td>
+            <td th:text="${e.evalDiv}">동료</td>
+            <td>
+                <span class="badge text-bg-warning" th:unless="${e.submitted}">작성중</span>
+                <span class="badge text-bg-secondary" th:if="${e.submitted}"
+                      th:text="|제출 ${e.evalDt}|">제출</span>
+            </td>
+            <td th:text="|${e.scoreCnt} / ${e.qstnCnt}|">0 / 7</td>
+            <td class="text-end">
+                <a class="btn btn-sm" th:href="@{/evaluations/{id}(id=${e.evalId})}"
+                   th:classappend="${e.submitted} ? 'btn-outline-secondary' : 'btn-primary'"
+                   th:text="${e.submitted} ? '보기' : '작성'">작성</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
