@@ -24,7 +24,7 @@ public class PlaceholderController {
             // 내 업무
             "/evaluations/customer",
             // 인력 관리
-            "/designations", "/staffing", "/projects", "/certificates/issue",
+            "/staffing", "/projects", "/certificates/issue",
             // 경영 현황
             "/dashboard", "/employees", "/adjustments/run", "/incentives",
             // 로그인 전

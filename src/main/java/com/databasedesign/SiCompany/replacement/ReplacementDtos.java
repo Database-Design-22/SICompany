@@ -10,11 +10,11 @@ public final class ReplacementDtos {
     private ReplacementDtos() {
     }
 
-    /** ① 교체 요청 목록 한 줄. 후임이 없으면 succEmpId가 null */
+    /** ① 교체 요청 목록 한 줄. 후임이 없으면 succEmpId가 null, 제외 등록 전이면 exclDesigId가 null */
     public record ReplRequest(int replReqId, String procStat, LocalDate reqDt, LocalDate procDt, String reqRsn,
                               String clientNm, String mgrNm, String prjId, String prjNm,
                               String trgtEmpId, String trgtEmpNm, String trgtRoleId,
-                              String succEmpId, String succEmpNm) {
+                              String succEmpId, String succEmpNm, Integer exclDesigId) {
     }
 
     /** 진행/지연 프로젝트 */

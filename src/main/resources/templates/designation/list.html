@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('발주처 지정인력')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 인력 관리</nav>
+    <h1 class="h3">발주처 지정인력</h1>
+    <p class="text-secondary">
+        발주처마다 먼저 배정할 직원(지명)과 배정을 피할 직원(제외)을 기간과 함께 관리합니다.
+        제외는 수용된 <a th:href="@{/replacements(stat='수용')}">교체 요청</a>에서 등록하고, 해제하면 해제일자만 남깁니다.
+    </p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">등록했습니다.</div>
+
+    <!-- 지명 등록 -->
+    <form method="post" th:action="@{/designations/nominate}" class="card card-body mb-4">
+        <div class="fw-semibold mb-2">지명 등록 <span class="small text-secondary fw-normal">(교체 요청 없이 등록, 지정일자는 오늘)</span></div>
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label for="nominate-client" class="form-label small">발주처</label>
+                <select id="nominate-client" name="clientId" class="form-select" required>
+                    <option value="">-- 발주처 --</option>
+                    <option th:each="c : ${clients}" th:value="${c.clientId}" th:text="${c.clientNm}"
+                            th:selected="${clientId != null and clientId == c.clientId}">발주처</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="nominate-emp" class="form-label small">개발직원</label>
+                <select id="nominate-emp" name="empId" class="form-select" required>
+                    <option value="">-- 개발직원 --</option>
+                    <option th:each="e : ${employees}" th:value="${e.empId}"
+                            th:text="|${e.empNm} (${e.empId}) · ${e.grdNm}|">직원</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="nominate-rsn" class="form-label small">사유</label>
+                <input type="text" id="nominate-rsn" name="desigRsn" class="form-control" maxlength="500" required
+                       placeholder="예: 이전 프로젝트에서 업무 이해도가 높음">
+            </div>
+        </div>
+        <div class="mt-2"><button type="submit" class="btn btn-primary btn-sm">지명 등록</button></div>
+    </form>
+
+    <!-- 목록 -->
+    <form method="get" th:action="@{/designations}" class="d-flex gap-2 align-items-center mb-3">
+        <label for="filter-client" class="small text-secondary">발주처</label>
+        <select id="filter-client" name="clientId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            <option value="" th:selected="${clientId == null}">전체</option>
+            <option th:each="c : ${clients}" th:value="${c.clientId}" th:text="${c.clientNm}"
+                    th:selected="${clientId != null and clientId == c.clientId}">발주처</option>
+        </select>
+        <span class="small text-secondary" th:text="|${designations.size()}건|">0건</span>
+    </form>
+
+    <div class="alert alert-light border" th:if="${designations.isEmpty()}">지정인력이 없습니다.</div>
+
+    <div class="table-responsive" th:unless="${designations.isEmpty()}">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>지정</th>
+                <th>구분</th>
+                <th style="min-width: 8rem">발주처</th>
+                <th class="text-nowrap">직원</th>
+                <th class="text-nowrap">지정일자</th>
+                <th class="text-nowrap">해제일자</th>
+                <th class="text-nowrap">유효</th>
+                <th class="text-nowrap">근거 요청</th>
+                <th style="min-width: 14rem">사유</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="d : ${designations}"
+                th:classappend="${newDesigId != null and newDesigId == d.desigId} ? 'table-success' : (${!d.valid} ? 'text-secondary')">
+                <td th:text="${d.desigId}">1</td>
+                <td>
+                    <span class="badge" th:classappend="${d.desigDiv == '제외'} ? 'text-bg-danger' : 'text-bg-primary'"
+                          th:text="${d.desigDiv}">제외</span>
+                </td>
+                <td th:text="${d.clientNm}">발주처</td>
+                <td class="text-nowrap">
+                    <span th:text="${d.empNm}">이름</span>
+                    <span class="small text-secondary" th:text="${d.empId}">직원ID</span>
+                </td>
+                <td class="text-nowrap" th:text="${d.desigDt}">2026-01-01</td>
+                <td class="text-nowrap" th:text="${d.rlsDt != null} ? ${d.rlsDt} : '-'">-</td>
+                <td class="text-nowrap">
+                    <span class="badge text-bg-success" th:if="${d.valid}">유효</span>
+                    <span class="badge text-bg-secondary" th:unless="${d.valid}">해제됨</span>
+                    <form method="post" class="d-inline ms-1" th:if="${d.valid}"
+                          th:action="@{/designations/{id}/release(id=${d.desigId}, clientId=${clientId})}"
+                          th:attr="data-confirm=|지정 ${d.desigId}번(${d.clientNm} ${d.empNm} ${d.desigDiv})을 오늘 날짜로 해제할까요? 행은 지우지 않고 해제일자만 넣습니다.|">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">해제</button>
+                    </form>
+                </td>
+                <td class="text-nowrap">
+                    <span th:if="${d.replReqId != null}" th:text="|요청 ${d.replReqId}|">요청 1</span>
+                    <div class="small text-secondary" th:if="${d.replReqId != null}" th:text="${d.reqMgrNm}">담당자</div>
+                    <span class="text-secondary" th:if="${d.replReqId == null}">-</span>
+                </td>
+                <td class="small" th:text="${d.desigRsn}">사유</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

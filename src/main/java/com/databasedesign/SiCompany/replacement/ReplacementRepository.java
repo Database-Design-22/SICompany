@@ -31,7 +31,10 @@ public class ReplacementRepository {
                    c.CLIENT_NM, m.MGR_NM,
                    th.PRJ_ID, p.PRJ_NM,
                    th.EMP_ID AS TRGT_EMP_ID, te.EMP_NM AS TRGT_EMP_NM, tp.ROLE_ID AS TRGT_ROLE_ID,
-                   sh.EMP_ID AS SUCC_EMP_ID, se.EMP_NM AS SUCC_EMP_NM
+                   sh.EMP_ID AS SUCC_EMP_ID, se.EMP_NM AS SUCC_EMP_NM,
+                   (SELECT MIN(d.DESIG_ID)
+                    FROM TB_CLIENT_DESIG_STAFF d
+                    WHERE d.REPL_REQ_ID = r.REPL_REQ_ID) AS EXCL_DESIG_ID
             FROM TB_STAFF_REPL_REQ r
             JOIN TB_CLIENT c      ON c.CLIENT_ID = r.CLIENT_ID
             JOIN TB_CLIENT_MGR m  ON m.CLIENT_ID = r.CLIENT_ID AND m.MGR_ID = r.MGR_ID
@@ -288,7 +291,8 @@ public class ReplacementRepository {
                 rs.getString("TRGT_EMP_NM"),
                 rs.getString("TRGT_ROLE_ID"),
                 rs.getString("SUCC_EMP_ID"),
-                rs.getString("SUCC_EMP_NM")), procStat, procStat);
+                rs.getString("SUCC_EMP_NM"),
+                rs.getObject("EXCL_DESIG_ID", Integer.class)), procStat, procStat);
     }
 
     public List<ActiveProject> findActiveProjects() {

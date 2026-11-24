@@ -56,6 +56,12 @@
                             <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">철회</button>
                         </form>
                     </div>
+                    <div class="mt-1" th:if="${r.procStat == '수용'}">
+                        <a class="btn btn-sm btn-outline-danger text-nowrap" th:if="${r.exclDesigId == null}"
+                           th:href="@{/designations/exclude(replReqId=${r.replReqId})}">제외 등록</a>
+                        <a class="small text-nowrap" th:if="${r.exclDesigId != null}"
+                           th:href="@{/designations}" th:text="|제외 등록됨 #${r.exclDesigId}|">제외 등록됨</a>
+                    </div>
                 </td>
                 <td class="text-nowrap" th:text="${r.reqDt}">2026-11-08</td>
                 <td>

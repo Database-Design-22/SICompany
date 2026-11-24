@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('제외 등록')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4" th:with="r=${request}">
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> / <a th:href="@{/replacements}">교체 요청</a>
+    </nav>
+    <h1 class="h3" th:text="|교체 요청 ${r.replReqId}번으로 제외 등록|">제외 등록</h1>
+    <p class="text-secondary">
+        발주처가 교체를 요청해 수용한 직원을 그 발주처의 '제외' 인력으로 등록합니다.
+        이후 같은 발주처 프로젝트에 배정할 때 경고와 근거가 표시됩니다.
+    </p>
+
+    <div class="alert alert-warning" th:unless="${r.accepted}"
+         th:text="|수용된 교체 요청에서만 제외 등록할 수 있습니다. (현재: ${r.procStat})|">수용 전</div>
+    <div class="alert alert-secondary" th:if="${existingDesigId != null}">
+        이 요청으로 이미 제외 등록했습니다.
+        <a th:href="@{/designations(clientId=${r.clientId})}" th:text="|지정 ${existingDesigId}번 보기|">보기</a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-semibold">교체 요청</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">발주처 · 요청 담당자</dt>
+                <dd class="col-sm-9" th:text="|${r.clientNm} · ${r.mgrNm}|">발주처</dd>
+                <dt class="col-sm-3">교체 대상</dt>
+                <dd class="col-sm-9" th:text="|${r.empNm} (${r.empId})|">직원</dd>
+                <dt class="col-sm-3">프로젝트</dt>
+                <dd class="col-sm-9" th:text="|${r.prjNm} (${r.prjId})|">프로젝트</dd>
+                <dt class="col-sm-3">처리</dt>
+                <dd class="col-sm-9" th:text="|${r.procStat} ${r.procDt != null ? r.procDt : ''}|">수용</dd>
+                <dt class="col-sm-3">요청 사유</dt>
+                <dd class="col-sm-9 mb-0" th:text="${r.reqRsn}">사유</dd>
+            </dl>
+        </div>
+    </div>
+
+    <form method="post" th:action="@{/designations/exclude}" th:if="${r.accepted and existingDesigId == null}" class="card card-body">
+        <input type="hidden" name="replReqId" th:value="${r.replReqId}">
+        <div class="mb-2">
+            <span class="badge text-bg-danger">제외</span>
+            <span th:text="|${r.clientNm} · ${r.empNm} (${r.empId}) · 지정일자 오늘|">발주처 · 직원</span>
+        </div>
+        <label for="desigRsn" class="form-label">지정 사유</label>
+        <textarea id="desigRsn" name="desigRsn" class="form-control mb-2" rows="3" maxlength="500" required
+                  th:text="${r.defaultReason()}"></textarea>
+        <div>
+            <button type="submit" class="btn btn-danger">제외 등록</button>
+            <a class="btn btn-outline-secondary" th:href="@{/replacements}">취소</a>
+        </div>
+    </form>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
