@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('평가 결과·보정')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 경영 현황</nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">평가 결과·보정</h1>
+        <a class="btn btn-primary btn-sm" th:href="@{/adjustments/results}">평가 결과 조회</a>
+    </div>
+    <p class="text-secondary mt-2">
+        평가자의 후하거나 짠 성향을 맞추기 위해 연도별로 평가자 보정값을 정합니다.
+        보정점수 = 원점수 − 적용보정값이며, 회차를 확정해야 보정점수를 볼 수 있습니다. 고객평가는 보정하지 않습니다.
+    </p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">확정했습니다.</div>
+
+    <h2 class="h5 mt-4">보정회차</h2>
+    <div class="alert alert-light border" th:if="${rounds.isEmpty()}">보정회차가 없습니다.</div>
+    <table class="table align-middle" th:unless="${rounds.isEmpty()}">
+        <thead class="table-light">
+        <tr>
+            <th>보정연도</th>
+            <th>성향 산정 기간</th>
+            <th>최소 프로젝트 수</th>
+            <th>최대 보정폭</th>
+            <th>평가자 보정값</th>
+            <th>실행</th>
+            <th>확정</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rounds}">
+            <td class="fw-semibold" th:text="${r.adjYr}">2026</td>
+            <td th:text="|최근 ${r.tndcyCalcPrd}년|">최근 3년</td>
+            <td th:text="|${r.minPrjCnt}개|">3개</td>
+            <td th:text="|±${r.maxAdjWdth}점|">±1.5점</td>
+            <td th:text="|${r.adjValCnt}건|">0건</td>
+            <td>
+                <div th:text="${r.execDt}">2026-11-10</div>
+                <div class="small text-secondary" th:text="${r.execrNm}">실행자</div>
+            </td>
+            <td>
+                <span class="badge text-bg-success" th:if="${r.confirmed}" th:text="|확정 ${r.cnfmDt}|">확정</span>
+                <span class="badge text-bg-warning" th:unless="${r.confirmed}">미확정</span>
+            </td>
+            <td class="text-end text-nowrap">
+                <a class="btn btn-sm btn-outline-primary"
+                   th:href="@{/adjustments/results(year=${r.adjYr})}">결과 보기</a>
+                <form method="post" class="d-inline" th:unless="${r.confirmed}"
+                      th:action="@{/adjustments/{y}/confirm(y=${r.adjYr})}"
+                      th:attr="onsubmit=|return confirm('${r.adjYr}년 보정회차를 확정할까요? 확정하면 다시 바꿀 수 없습니다.');|">
+                    <button type="submit" class="btn btn-sm btn-danger">확정</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
