@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('교체 요청 등록')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> / <a th:href="@{/replacements}">교체 요청</a>
+    </nav>
+    <h1 class="h3">교체 요청 등록</h1>
+    <p class="text-secondary">발주처 담당자에게 받은 교체 요청을 대신 등록합니다. 등록하면 처리상태는 '접수'입니다.</p>
+
+    <!-- ① 프로젝트 선택 (고르면 화면을 다시 불러온다) -->
+    <form method="get" th:action="@{/replacements/new}" class="card card-body mb-3">
+        <label for="prjId" class="form-label fw-semibold">① 프로젝트 (진행·지연)</label>
+        <select id="prjId" name="prjId" class="form-select" onchange="this.form.submit()">
+            <option value="" th:selected="${project == null}">-- 프로젝트를 고르세요 --</option>
+            <option th:each="p : ${projects}" th:value="${p.prjId}"
+                    th:selected="${project != null and project.prjId == p.prjId}"
+                    th:text="|${p.clientNm} · ${p.prjId} ${p.prjNm} (${p.prjStat})|">프로젝트</option>
+        </select>
+    </form>
+
+    <form method="post" th:action="@{/replacements}" th:if="${project != null}">
+        <!-- ② 교체 대상 -->
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">② 교체 대상 (투입 중 인원, PM 제외)</div>
+            <div class="card-body">
+                <div class="text-secondary" th:if="${hists.isEmpty()}">교체할 수 있는 투입 중 인원이 없습니다.</div>
+                <table class="table table-sm align-middle mb-0" th:unless="${hists.isEmpty()}">
+                    <thead>
+                    <tr><th></th><th>직원</th><th>직무</th><th>투입 시작일</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="h : ${hists}" th:classappend="${h.hasOpenRequest()} ? 'text-secondary'">
+                        <td>
+                            <input class="form-check-input" type="radio" name="prjHistId" required
+                                   th:id="|hist-${h.prjHistId}|" th:value="${h.prjHistId}"
+                                   th:disabled="${h.hasOpenRequest()}">
+                        </td>
+                        <td>
+                            <label th:for="|hist-${h.prjHistId}|">
+                                <span th:text="${h.empNm}">이름</span>
+                                <span class="small text-secondary" th:text="${h.empId}">직원ID</span>
+                            </label>
+                        </td>
+                        <td th:text="|${h.roleNm} (${h.roleId})|">직무</td>
+                        <td th:text="${h.strtDt}">2026-07-06</td>
+                        <td><span class="badge text-bg-warning" th:if="${h.hasOpenRequest()}">접수된 요청 있음</span></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ③ 요청 담당자, 요청일자, 사유 -->
+        <div class="card mb-3">
+            <div class="card-header fw-semibold" th:text="|③ 요청 내용 (발주처: ${project.clientNm})|">③ 요청 내용</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="mgrId" class="form-label">요청 담당자</label>
+                        <select id="mgrId" name="mgrId" class="form-select" required>
+                            <option th:each="m : ${managers}" th:value="${m.mgrId}"
+                                    th:text="${m.prjMgr} ? |${m.mgrNm} (프로젝트 담당)| : ${m.mgrNm}">담당자</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="reqDt" class="form-label">요청일자</label>
+                        <input type="date" id="reqDt" name="reqDt" class="form-control" required
+                               th:value="${today}" th:max="${today}">
+                    </div>
+                    <div class="col-12">
+                        <label for="reqRsn" class="form-label">요청 사유</label>
+                        <textarea id="reqRsn" name="reqRsn" class="form-control" rows="3" maxlength="500" required
+                                  placeholder="발주처가 교체를 요청한 이유 (500자까지)"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" th:disabled="${hists.isEmpty()}">접수 등록</button>
+        <a class="btn btn-outline-secondary" th:href="@{/replacements}">취소</a>
+    </form>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

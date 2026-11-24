@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('교체 요청')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 인력 관리</nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">교체 요청</h1>
+        <a class="btn btn-primary btn-sm" th:href="@{/replacements/new}">요청 등록</a>
+    </div>
+    <p class="text-secondary mt-2">발주처 담당자가 요청한 인력 교체를 경영관리팀이 대신 등록하고 처리합니다.</p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">등록했습니다.</div>
+
+    <form method="get" th:action="@{/replacements}" class="d-flex gap-2 align-items-center mb-3">
+        <label for="stat" class="small text-secondary">처리상태</label>
+        <select id="stat" name="stat" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            <option value="" th:selected="${stat == ''}">전체</option>
+            <option th:each="s : ${stats}" th:value="${s}" th:text="${s}" th:selected="${s == stat}">접수</option>
+        </select>
+        <span class="small text-secondary" th:text="|${requests.size()}건|">0건</span>
+    </form>
+
+    <div class="alert alert-light border" th:if="${requests.isEmpty()}">교체 요청이 없습니다.</div>
+
+    <div class="table-responsive" th:unless="${requests.isEmpty()}">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>요청</th>
+                <th>상태</th>
+                <th class="text-nowrap">요청일자</th>
+                <th>발주처 · 요청 담당자</th>
+                <th>프로젝트</th>
+                <th class="text-nowrap">교체 대상</th>
+                <th class="text-nowrap">후임</th>
+                <th>사유</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${requests}" th:classappend="${newReqId != null and newReqId == r.replReqId} ? 'table-success'">
+                <td class="text-secondary" th:text="${r.replReqId}">1</td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${r.procStat == '접수'} ? 'text-bg-warning' : (${r.procStat == '수용'} ? 'text-bg-primary' : 'text-bg-secondary')"
+                          th:text="${r.procStat}">접수</span>
+                    <div class="small text-secondary text-nowrap" th:if="${r.procDt != null}" th:text="|처리 ${r.procDt}|">처리일</div>
+                </td>
+                <td class="text-nowrap" th:text="${r.reqDt}">2026-11-08</td>
+                <td>
+                    <div th:text="${r.clientNm}">발주처</div>
+                    <div class="small text-secondary" th:text="${r.mgrNm}">담당자</div>
+                </td>
+                <td>
+                    <div th:text="${r.prjNm}">프로젝트</div>
+                    <div class="small text-secondary" th:text="${r.prjId}">P26-000</div>
+                </td>
+                <td class="text-nowrap">
+                    <span th:text="${r.trgtEmpNm}">이름</span>
+                    <span class="small text-secondary" th:text="|${r.trgtEmpId} · ${r.trgtRoleId}|">직원ID</span>
+                </td>
+                <td class="text-nowrap">
+                    <span th:if="${r.succEmpId != null}" th:text="${r.succEmpNm}">후임</span>
+                    <span class="small text-secondary" th:if="${r.succEmpId != null}" th:text="${r.succEmpId}">직원ID</span>
+                    <span class="text-secondary" th:if="${r.succEmpId == null}">-</span>
+                </td>
+                <td class="small" style="max-width: 20rem" th:text="${r.reqRsn}">사유</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
