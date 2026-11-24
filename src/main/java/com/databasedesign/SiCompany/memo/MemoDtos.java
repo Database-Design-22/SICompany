@@ -28,8 +28,21 @@ public final class MemoDtos {
         }
     }
 
-    /** ② 메모를 쓸 수 있는 대상 한 명 */
+    /** 메모를 쓸 수 있는 대상 한 명 */
     public record MemoTarget(String empId, String empNm, String roleId, String roleNm, int memoCnt) {
+    }
+
+    /** 팀원 조회 SQL의 한 줄. endDt가 null이면 아직 투입 중이다. */
+    public record TeamMemberRow(String empId, String empNm, String roleId, String roleNm,
+                                LocalDate strtDt, LocalDate endDt) {
+    }
+
+    /** ② 팀원 화면의 한 명. me: 나 자신, memoAllowed: 메모 대상인지 */
+    public record TeamMember(TeamMemberRow row, boolean me, boolean memoAllowed, int memoCnt) {
+    }
+
+    /** 평가메모 메뉴의 새 메모 대상 드롭다운: 프로젝트별로 묶은 대상 */
+    public record TargetGroup(MyProject project, List<MemoTarget> targets) {
     }
 
     /** ③ 대상에게 쓴 메모 한 건 */

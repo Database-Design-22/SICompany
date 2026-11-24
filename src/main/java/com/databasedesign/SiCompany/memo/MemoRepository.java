@@ -14,6 +14,7 @@ import com.databasedesign.SiCompany.memo.MemoDtos.MemoTarget;
 import com.databasedesign.SiCompany.memo.MemoDtos.MyMemo;
 import com.databasedesign.SiCompany.memo.MemoDtos.MyProject;
 import com.databasedesign.SiCompany.memo.MemoDtos.Participation;
+import com.databasedesign.SiCompany.memo.MemoDtos.TeamMemberRow;
 
 import lombok.RequiredArgsConstructor;
 
@@ -70,6 +71,20 @@ public class MemoRepository {
                            AND GREATEST(mh.STRT_DT, th.STRT_DT)
                                <= LEAST(COALESCE(mh.END_DT, CURDATE()), COALESCE(th.END_DT, CURDATE()))
                        ) )
+            ORDER BY FIELD(t.ROLE_ID, 'PM', 'PL', 'AN', 'DS', 'PG', 'TS'), e.EMP_NM
+            """;
+
+    /** 3-1. 프로젝트 팀원 전체 (직무, 투입 기간. 열린 투입이 있으면 종료일 없음) */
+    public static final String FIND_TEAM_MEMBERS = """
+            SELECT t.EMP_ID, e.EMP_NM, t.ROLE_ID, r.ROLE_NM,
+                   MIN(h.STRT_DT) AS STRT_DT,
+                   CASE WHEN COUNT(*) = COUNT(h.END_DT) THEN MAX(h.END_DT) END AS END_DT
+            FROM TB_PRJ_PTCP t
+            JOIN TB_EMP e      ON e.EMP_ID = t.EMP_ID
+            JOIN TB_ROLE r     ON r.ROLE_ID = t.ROLE_ID
+            JOIN TB_PRJ_HIST h ON h.EMP_ID = t.EMP_ID AND h.PRJ_ID = t.PRJ_ID
+            WHERE t.PRJ_ID = ?
+            GROUP BY t.EMP_ID, e.EMP_NM, t.ROLE_ID, r.ROLE_NM
             ORDER BY FIELD(t.ROLE_ID, 'PM', 'PL', 'AN', 'DS', 'PG', 'TS'), e.EMP_NM
             """;
 
@@ -166,6 +181,16 @@ public class MemoRepository {
                 rs.getString("ROLE_ID"),
                 rs.getString("ROLE_NM"),
                 rs.getInt("MEMO_CNT")), empId, prjId);
+    }
+
+    public List<TeamMemberRow> findTeamMembers(String prjId) {
+        return jdbcTemplate.query(FIND_TEAM_MEMBERS, (rs, i) -> new TeamMemberRow(
+                rs.getString("EMP_ID"),
+                rs.getString("EMP_NM"),
+                rs.getString("ROLE_ID"),
+                rs.getString("ROLE_NM"),
+                rs.getObject("STRT_DT", LocalDate.class),
+                rs.getObject("END_DT", LocalDate.class)), prjId);
     }
 
     public int countSubmittedEval(String prjId, String evlteEmpId, String evltrEmpId) {

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${participation.prjNm})}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> / <a th:href="@{/my/projects}">내 프로젝트</a>
+    </nav>
+    <h1 class="h3">
+        <span th:text="${participation.prjNm}">프로젝트명</span>
+        <small class="text-secondary fs-6" th:text="|${participation.prjId} · ${participation.prjStat} · 내 직무 ${participation.roleId}|"></small>
+    </h1>
+    <p class="text-secondary">
+        이 프로젝트의 팀원입니다.
+        <span th:if="${participation.pm}">PM이므로 팀원 전원에게 평가메모를 남길 수 있습니다.</span>
+        <span th:unless="${participation.pm}">나와 투입 기간이 하루 이상 겹친 팀원에게만 평가메모를 남길 수 있습니다.</span>
+    </p>
+
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+        <tr>
+            <th>직원</th>
+            <th>직무</th>
+            <th>투입 기간</th>
+            <th>내 메모</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="m : ${members}" th:classappend="${m.me} ? 'table-light'">
+            <td>
+                <span class="fw-semibold" th:text="${m.row.empNm}">이름</span>
+                <span class="small text-secondary" th:text="${m.row.empId}">직원ID</span>
+                <span class="badge text-bg-dark" th:if="${m.me}">나</span>
+            </td>
+            <td th:text="|${m.row.roleNm} (${m.row.roleId})|">직무</td>
+            <td>
+                <span th:text="${m.row.strtDt}">2026-01-01</span> ~
+                <span th:if="${m.row.endDt != null}" th:text="${m.row.endDt}">2026-12-31</span>
+                <span class="badge text-bg-success" th:if="${m.row.endDt == null}">투입 중</span>
+            </td>
+            <td>
+                <span th:if="${m.memoAllowed}" th:text="|${m.memoCnt}건|">0건</span>
+            </td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" th:if="${m.memoAllowed}"
+                   th:href="@{/memos/{p}/{t}(p=${participation.prjId}, t=${m.row.empId})}">메모</a>
+                <span class="small text-secondary" th:if="${!m.memoAllowed and !m.me}">투입 기간이 겹치지 않음</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

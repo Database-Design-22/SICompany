@@ -8,9 +8,49 @@
     <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 내 업무</nav>
     <h1 class="h3">평가메모</h1>
     <p class="text-secondary">
-        내가 쓴 메모 전체입니다. 새 메모는 <a th:href="@{/my/projects}">내 프로젝트</a>에서 팀원을 골라 씁니다.
+        진행 중인 프로젝트에서 함께 일하는 팀원에 대해 나만 보는 메모를 남깁니다. 평가를 제출하면 그 대상의 메모는 삭제됩니다.
     </p>
 
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">저장했습니다.</div>
+
+    <!-- 새 메모 -->
+    <form method="post" th:action="@{/memos}" class="card card-body mb-4">
+        <input type="hidden" name="returnTo" value="memos">
+        <div class="fw-semibold mb-2">새 메모</div>
+        <div class="alert alert-light border mb-0" th:if="${targetGroups.isEmpty()}">
+            메모를 남길 수 있는 팀원이 없습니다. (진행·지연 중인 프로젝트에 참여하고 있어야 합니다)
+        </div>
+        <th:block th:unless="${targetGroups.isEmpty()}">
+            <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                    <label for="memo-project" class="form-label small">① 프로젝트</label>
+                    <select id="memo-project" name="prjId" class="form-select" required>
+                        <option value="">-- 프로젝트를 고르세요 --</option>
+                        <option th:each="g : ${targetGroups}" th:value="${g.project.prjId}"
+                                th:text="|${g.project.prjId} ${g.project.prjNm} (내 직무 ${g.project.roleId})|">프로젝트</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="memo-target" class="form-label small">② 팀원</label>
+                    <select id="memo-target" name="trgtEmpId" class="form-select" required disabled>
+                        <option value="">먼저 프로젝트를 고르세요</option>
+                        <th:block th:each="g : ${targetGroups}">
+                            <option th:each="t : ${g.targets}" hidden disabled
+                                    th:attr="data-prj=${g.project.prjId}"
+                                    th:value="${t.empId}"
+                                    th:text="|${t.empNm} (${t.roleNm}) · 내 메모 ${t.memoCnt}건|">이름</option>
+                        </th:block>
+                    </select>
+                </div>
+            </div>
+            <label for="memo-content" class="form-label small">③ 내용</label>
+            <textarea id="memo-content" name="memoCn" class="form-control mb-2" rows="3" maxlength="1000" disabled
+                      placeholder="함께 일하며 기억해 둘 내용을 적으세요. (1000자까지)"></textarea>
+            <div><button type="submit" id="memo-save" class="btn btn-primary btn-sm" disabled>저장</button></div>
+        </th:block>
+    </form>
+
+    <h2 class="h5">내가 쓴 메모 <span class="text-secondary" th:text="|${memos.size()}건|">0건</span></h2>
     <div class="alert alert-light border" th:if="${memos.isEmpty()}">아직 쓴 메모가 없습니다.</div>
 
     <table class="table table-hover align-middle" th:unless="${memos.isEmpty()}">
@@ -41,7 +81,7 @@
             </td>
             <td class="text-end">
                 <a class="btn btn-sm btn-outline-primary"
-                   th:href="@{/memos/{p}/{t}(p=${m.prjId}, t=${m.trgtEmpId})}">열기</a>
+                   th:href="@{/memos/{p}/{t}(p=${m.prjId}, t=${m.trgtEmpId})}">수정·삭제</a>
             </td>
         </tr>
         </tbody>
@@ -50,5 +90,35 @@
 
 <div th:replace="~{fragments/layout :: sql}"></div>
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    // ① 프로젝트를 고르면 ② 그 프로젝트의 메모 대상만 보이고, ② 팀원을 고르면 ③ 내용을 쓸 수 있다.
+    // 대상 목록은 서버가 메모 대상 SQL로 만든 것이며, 저장할 때 서버가 다시 검사한다.
+    const project = document.getElementById('memo-project');
+    const target = document.getElementById('memo-target');
+    const content = document.getElementById('memo-content');
+    const save = document.getElementById('memo-save');
+    if (project && target) {
+        project.addEventListener('change', () => {
+            for (const opt of [...target.options].slice(1)) {
+                const show = opt.dataset.prj === project.value;
+                opt.hidden = !show;
+                opt.disabled = !show;
+            }
+            target.value = '';
+            target.disabled = !project.value;
+            target.options[0].text = project.value ? '-- 팀원을 고르세요 --' : '먼저 프로젝트를 고르세요';
+            target.dispatchEvent(new Event('change'));
+        });
+        target.addEventListener('change', () => {
+            content.disabled = !target.value;
+            save.disabled = !target.value;
+        });
+        // 프로젝트가 하나뿐이면 미리 골라 둔다.
+        if (project.options.length === 2) {
+            project.value = project.options[1].value;
+            project.dispatchEvent(new Event('change'));
+        }
+    }
+</script>
 </body>
 </html>

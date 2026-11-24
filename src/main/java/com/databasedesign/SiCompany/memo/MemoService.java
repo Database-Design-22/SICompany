@@ -1,6 +1,9 @@
 package com.databasedesign.SiCompany.memo;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +16,8 @@ import com.databasedesign.SiCompany.memo.MemoDtos.MemoTarget;
 import com.databasedesign.SiCompany.memo.MemoDtos.MyMemo;
 import com.databasedesign.SiCompany.memo.MemoDtos.MyProject;
 import com.databasedesign.SiCompany.memo.MemoDtos.Participation;
+import com.databasedesign.SiCompany.memo.MemoDtos.TargetGroup;
+import com.databasedesign.SiCompany.memo.MemoDtos.TeamMember;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +47,28 @@ public class MemoService {
 
     public List<MemoTarget> findTargets(CurrentUser user, String prjId) {
         return memoRepository.findMemoTargets(user.empId(), prjId);
+    }
+
+    /** ② 팀원 전체. 참여자만 볼 수 있고, 메모 대상 SQL로 [메모] 버튼을 띄울지 정한다. */
+    public List<TeamMember> getTeam(CurrentUser user, String prjId) {
+        getParticipation(user, prjId);
+        Map<String, MemoTarget> targets = findTargets(user, prjId).stream()
+                .collect(Collectors.toMap(MemoTarget::empId, Function.identity()));
+        return memoRepository.findTeamMembers(prjId).stream()
+                .map(row -> {
+                    MemoTarget target = targets.get(row.empId());
+                    return new TeamMember(row, row.empId().equals(user.empId()),
+                            target != null, target == null ? 0 : target.memoCnt());
+                })
+                .toList();
+    }
+
+    /** 평가메모 메뉴의 새 메모 대상: 내 진행/지연 프로젝트마다 메모 대상 SQL을 실행해 묶는다. */
+    public List<TargetGroup> findTargetGroups(CurrentUser user) {
+        return findMyProjects(user).stream()
+                .map(p -> new TargetGroup(p, findTargets(user, p.prjId())))
+                .filter(g -> !g.targets().isEmpty())
+                .toList();
     }
 
     public MemoPage getMemoPage(CurrentUser user, String prjId, String trgtEmpId) {
