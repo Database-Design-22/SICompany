@@ -12,28 +12,25 @@
 <body>
 
 <!-- 공통 헤더: <div th:replace="~{fragments/layout :: header}"></div> -->
-<nav th:fragment="header" class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
+<nav th:fragment="header" class="navbar navbar-expand navbar-dark bg-dark">
+    <div class="container flex-wrap gap-2">
         <a class="navbar-brand" th:href="@{/}">SI 인력 관리 데모</a>
 
+        <!-- 메뉴는 common/Menus.java 에 정의한다. 현재 사용자가 볼 수 있는 그룹만 나온다. -->
         <ul class="navbar-nav me-auto">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">시나리오 1 평가</a>
+            <li class="nav-item dropdown" th:each="g : ${menuGroups}">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                   th:text="${g.title}">메뉴 그룹</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" th:href="@{/memos}">① 평가메모</a></li>
-                    <li><a class="dropdown-item" th:href="@{/evaluations}">② 평가 작성과 제출</a></li>
-                    <li><a class="dropdown-item" th:href="@{/adjustments}">③ 보정점수 조회 (경영진)</a></li>
-                </ul>
-            </li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">시나리오 2 교체·배정</a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" th:href="@{/replacements}">① 교체 요청과 처리 (경영관리팀)</a></li>
-                    <li><a class="dropdown-item" th:href="@{/designations}">② 발주처 지정인력 (경영관리팀)</a></li>
-                    <li><a class="dropdown-item" th:href="@{/designations/candidates}">③ 배정 후보 목록 (경영관리팀)</a></li>
+                    <li th:each="m : ${g.items}">
+                        <a class="dropdown-item" th:href="@{${m.path}}"
+                           th:classappend="${m.path == currentPath} ? 'active'" th:text="${m.title}">메뉴</a>
+                    </li>
                 </ul>
             </li>
         </ul>
+
+        <a class="btn btn-outline-light btn-sm me-3" th:href="@{/signup}" th:if="${currentUser == null}">회원가입</a>
 
         <form method="post" th:action="@{/current-user}" class="d-flex align-items-center gap-2">
             <input type="hidden" name="returnUrl" th:value="${currentPath}">

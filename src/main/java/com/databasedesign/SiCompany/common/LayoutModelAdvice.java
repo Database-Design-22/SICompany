@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
  * - selectableUsers : 현재 사용자 드롭다운 목록
  * - currentUser     : 고른 사용자 (없으면 null)
  * - currentPath     : 사용자를 바꾼 뒤 돌아올 경로
+ * - menuGroups      : 현재 사용자가 볼 수 있는 메뉴 그룹
  */
 @ControllerAdvice
 @RequiredArgsConstructor
@@ -28,8 +29,10 @@ public class LayoutModelAdvice {
 
     /** 오류 화면처럼 @ModelAttribute가 돌지 않는 곳에서도 쓴다. */
     public void fill(Map<String, Object> model, HttpServletRequest request) {
+        CurrentUser currentUser = currentUserService.findCurrentUser(request.getSession(false)).orElse(null);
         model.put("selectableUsers", currentUserService.findSelectableUsers());
-        model.put("currentUser", currentUserService.findCurrentUser(request.getSession(false)).orElse(null));
+        model.put("currentUser", currentUser);
         model.put("currentPath", request.getRequestURI());
+        model.put("menuGroups", Menus.visibleTo(currentUser));
     }
 }

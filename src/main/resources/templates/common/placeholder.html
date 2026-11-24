@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head(${title})}"></head>
+<head th:replace="~{fragments/layout :: head(${item.title})}"></head>
 <body>
 <div th:replace="~{fragments/layout :: header}"></div>
 
 <main class="container py-4">
-    <div class="small text-secondary" th:text="${scenario}">시나리오</div>
-    <h1 class="h3" th:text="${title}">화면 제목</h1>
-    <p class="text-secondary">아직 만들지 않은 화면입니다.</p>
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> / <span th:text="${groupTitle}">메뉴 그룹</span>
+    </nav>
+    <h1 class="h3" th:text="${item.title}">화면 제목</h1>
+    <p class="text-secondary" th:text="${item.description}">설명</p>
+    <div class="alert alert-light border">준비 중인 화면입니다.</div>
 </main>
 
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

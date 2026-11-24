@@ -15,7 +15,7 @@ public class CurrentUserRepository {
 
     /** 현재 사용자 드롭다운: 재직 직원 목록 (경영진 → 경영관리팀 → 일반직원 순) */
     public static final String FIND_ACTIVE_EMPLOYEES = """
-            SELECT e.EMP_ID, e.EMP_NM, e.AUTH_ID, a.AUTH_NM
+            SELECT e.EMP_ID, e.EMP_NM, e.EMP_DIV, e.AUTH_ID, a.AUTH_NM
             FROM TB_EMP e
             JOIN TB_AUTH a ON a.AUTH_ID = e.AUTH_ID
             WHERE e.EMPL_STAT = '재직'
@@ -24,7 +24,7 @@ public class CurrentUserRepository {
 
     /** 세션의 직원ID로 현재 사용자 한 명 조회 (재직자만) */
     public static final String FIND_ACTIVE_EMPLOYEE_BY_ID = """
-            SELECT e.EMP_ID, e.EMP_NM, e.AUTH_ID, a.AUTH_NM
+            SELECT e.EMP_ID, e.EMP_NM, e.EMP_DIV, e.AUTH_ID, a.AUTH_NM
             FROM TB_EMP e
             JOIN TB_AUTH a ON a.AUTH_ID = e.AUTH_ID
             WHERE e.EMP_ID = ?
@@ -34,6 +34,7 @@ public class CurrentUserRepository {
     private static final RowMapper<CurrentUser> CURRENT_USER_MAPPER = (rs, rowNum) -> new CurrentUser(
             rs.getString("EMP_ID"),
             rs.getString("EMP_NM"),
+            rs.getString("EMP_DIV"),
             rs.getString("AUTH_ID"),
             rs.getString("AUTH_NM"));
 
