@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('홈')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <h1 class="h3 mb-2">SI 회사 프로젝트 인력 배치·평가 데모</h1>
+    <p class="text-secondary">
+        화면 위쪽에서 현재 사용자를 고른 뒤 아래 순서대로 메뉴를 따라간다.
+        각 화면 아래쪽의 "이 화면이 실행한 SQL"을 펼치면 결과를 만든 쿼리를 볼 수 있다.
+    </p>
+
+    <div class="alert alert-secondary" th:if="${currentUser != null}">
+        현재 사용자: <strong th:text="${currentUser.empNm}">이름</strong>
+        (<span th:text="${currentUser.empId}">직원ID</span>, <span th:text="${currentUser.authNm}">권한</span>)
+    </div>
+    <div class="alert alert-warning" th:if="${currentUser == null}">
+        아직 현재 사용자를 고르지 않았습니다.
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-semibold">시나리오 1. 평가메모 → 평가 제출 → 보정점수 조회</div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">
+                            <a th:href="@{/memos}">평가메모</a>:
+                            진행 중 프로젝트에서 함께 일한 동료에 대한 메모를 남긴다.
+                            <div class="small text-secondary">예: PM 김다니엘(11-0007), 프로젝트 P26-013</div>
+                        </li>
+                        <li class="mb-2">
+                            <a th:href="@{/evaluations}">평가 작성과 제출</a>:
+                            '작성중' 평가에 점수와 내용을 채워 제출한다. 제출하면 그 피평가자에 대한 메모가 지워진다.
+                            <div class="small text-secondary">예: 평가자 김직수(25-0001), 평가 1495</div>
+                        </li>
+                        <li>
+                            <a th:href="@{/adjustments}">보정점수 조회</a>:
+                            경영진이 원점수와 보정점수를 보고 보정회차를 확정한다.
+                            <div class="small text-secondary">예: 경영진 강현준(10-0002)</div>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-semibold">시나리오 2. 교체 요청 → 수용 → 제외 등록 → 배정 후보</div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">
+                            <a th:href="@{/replacements}">교체 요청과 처리</a>:
+                            발주처의 교체 요청을 수용하면 대상 투입이 끝나고 후임이 투입된다.
+                            <div class="small text-secondary">예: 경영관리팀 이현규(13-0001), 요청 10 (대상 조민경, P26-007)</div>
+                        </li>
+                        <li class="mb-2">
+                            <a th:href="@{/designations}">발주처 지정인력</a>:
+                            수용한 요청에서 대상 직원을 그 발주처의 '제외' 인력으로 등록한다.
+                        </li>
+                        <li>
+                            <a th:href="@{/designations/candidates}">배정 후보 목록</a>:
+                            같은 발주처의 다른 프로젝트에서 후보를 볼 때 제외된 직원에 경고와 근거가 보인다.
+                            <div class="small text-secondary">예: 프로젝트 P26-011</div>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
