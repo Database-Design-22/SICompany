@@ -46,7 +46,7 @@
                 <button type="submit" class="btn btn-outline-primary btn-sm" th:disabled="${blocked}">수정</button>
             </form>
             <form method="post" th:action="@{/memos/{id}/delete(id=${m.memoId})}" class="mt-2"
-                  onsubmit="return confirm('이 메모를 삭제할까요?');">
+                  data-confirm="이 메모를 삭제할까요?">
                 <button type="submit" class="btn btn-outline-danger btn-sm">삭제</button>
             </form>
         </div>

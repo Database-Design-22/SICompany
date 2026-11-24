@@ -52,7 +52,7 @@
                    th:href="@{/adjustments/results(year=${r.adjYr})}">결과 보기</a>
                 <form method="post" class="d-inline" th:unless="${r.confirmed}"
                       th:action="@{/adjustments/{y}/confirm(y=${r.adjYr})}"
-                      th:attr="onsubmit=|return confirm('${r.adjYr}년 보정회차를 확정할까요? 확정하면 다시 바꿀 수 없습니다.');|">
+                      th:attr="data-confirm=|${r.adjYr}년 보정회차를 확정할까요? 확정하면 다시 바꿀 수 없습니다.|">
                     <button type="submit" class="btn btn-sm btn-danger">확정</button>
                 </form>
             </td>

@@ -64,9 +64,55 @@
     </details>
 </section>
 
-<!-- 공통 스크립트: <th:block th:replace="~{fragments/layout :: scripts}"></th:block> -->
+<!-- 공통 스크립트: <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+     확인 창: 폼이나 제출 버튼에 data-confirm="물어볼 말"을 달면 제출 전에 화면 안 확인 창을 띄운다.
+     (브라우저 기본 confirm()은 앱 내장 브라우저 등에서 바로 취소되는 경우가 있어 쓰지 않는다) -->
 <th:block th:fragment="scripts">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <div class="modal fade" id="confirm-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5">확인</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                </div>
+                <div class="modal-body" id="confirm-message" style="white-space: pre-line">계속할까요?</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="confirm-ok">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        (() => {
+            const modalEl = document.getElementById('confirm-modal');
+            const modal = new bootstrap.Modal(modalEl);
+            let pending = null;
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                const message = (e.submitter && e.submitter.dataset.confirm) || form.dataset.confirm;
+                if (!message || form.dataset.confirmed === 'yes') {
+                    return;
+                }
+                e.preventDefault();
+                pending = { form, submitter: e.submitter };
+                document.getElementById('confirm-message').textContent = message;
+                modal.show();
+            });
+            document.getElementById('confirm-ok').addEventListener('click', () => {
+                if (!pending) {
+                    return;
+                }
+                const { form, submitter } = pending;
+                pending = null;
+                modal.hide();
+                form.dataset.confirmed = 'yes';
+                form.requestSubmit(submitter || undefined);
+            });
+        })();
+    </script>
 </th:block>
 
 </body>
