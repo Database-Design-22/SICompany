@@ -1,0 +1,25 @@
+# si_company 개발·실험용 MySQL (팀원 4명이 같은 환경을 쓰기 위한 설정)
+# 사용법
+#   1. 이 파일이 있는 폴더 안에 init 폴더를 만들고 01_schema.sql, 02_codes.sql, 03_dummy.sql 을 넣는다
+#      (트리거를 쓸 거면 04_triggers.sql 도 넣는다. 00_run_all.sql 과 05_verify.sql 은 넣지 않는다)
+#   2. docker compose up -d
+#      처음 켤 때만 init 폴더의 SQL 이 이름 순서대로 실행된다
+#   3. 처음부터 다시 적재하려면 docker compose down -v 후 다시 up
+services:
+  mysql:
+    image: mysql:8.4.8            # 팀원 모두 같은 태그를 쓴다 (성능 실험 결과를 비교하기 위해 고정)
+    container_name: si-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=512M   # 성능 실험 때 팀원마다 메모리 조건이 같도록 고정
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d:ro
+      - si-data:/var/lib/mysql
+volumes:
+  si-data:
