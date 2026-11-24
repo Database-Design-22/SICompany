@@ -2,6 +2,8 @@
 
 시연 순서대로 화면마다 버튼을 누르면 실행되는 SQL을 실행 순서대로 정리했다. SQL은 각 Repository의 상수(`클래스.상수`)에서 그대로 옮겼으므로 실제 실행한 SQL과 같다. 화면 아래쪽 "이 화면이 실행한 SQL"에 나오는 것도 같은 상수다.
 
+> 이 문서는 `scripts/gen_scenario_sql.py`로 만든다. 직접 고치지 말고, 코드의 SQL을 바꾼 뒤 프로젝트 폴더에서 `python scripts/gen_scenario_sql.py`를 다시 실행한다.
+
 - **트랜잭션 범위:** 데이터를 바꾸는 버튼은 Service 메서드 하나에 `@Transactional`이 붙어 있어, 그 버튼이 실행하는 SQL 전부가 한 트랜잭션이다. 규칙 위반(`BusinessException`)이나 DB 오류가 나면 전부 롤백한다. 조회 화면은 트랜잭션 없이 SQL마다 자동 커밋한다.
 - **`?`:** JdbcTemplate에 넘기는 값이다. 직원ID, 프로젝트ID 같은 값은 현재 사용자와 화면에서 고른 값으로 채운다.
 - 데이터를 처음 상태로 되돌리려면 `docker` 폴더에서 `docker compose down -v` 후 `docker compose up -d`.
