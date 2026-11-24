@@ -111,6 +111,52 @@
                 form.dataset.confirmed = 'yes';
                 form.requestSubmit(submitter || undefined);
             });
+
+            // 두 번 제출 막기: POST 폼을 한 번 제출하면 처리가 끝날 때까지 그 폼의 버튼을 잠근다.
+            // (확인 창을 띄운 제출은 위에서 preventDefault 되므로 여기서 건너뛰고, 확인 후 다시 제출될 때 잠근다)
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (e.defaultPrevented || (form.getAttribute('method') || '').toLowerCase() !== 'post') {
+                    return;
+                }
+                if (form.dataset.submitting === 'yes') {
+                    e.preventDefault();
+                    return;
+                }
+                form.dataset.submitting = 'yes';
+                const submitter = e.submitter;
+                // 누른 버튼의 name/value(예: action=save)는 제출 순간에 이미 담기므로, 잠금은 그 다음에 건다.
+                setTimeout(() => {
+                    const buttons = [...form.querySelectorAll('button[type=submit], button:not([type])')];
+                    if (submitter && !buttons.includes(submitter)) {
+                        buttons.push(submitter);
+                    }
+                    buttons.forEach((b) => {
+                        b.disabled = true;
+                        b.dataset.locked = 'yes';
+                        if (b === submitter) {
+                            b.dataset.originalText = b.textContent;
+                            b.textContent = '처리 중…';
+                        }
+                    });
+                }, 0);
+            });
+
+            // 뒤로 가기로 돌아온 화면(브라우저 캐시)은 입력한 내용은 그대로 두고 잠금만 푼다.
+            window.addEventListener('pageshow', (e) => {
+                if (!e.persisted) {
+                    return;
+                }
+                document.querySelectorAll('form[data-submitting]').forEach((f) => delete f.dataset.submitting);
+                document.querySelectorAll('[data-locked]').forEach((b) => {
+                    b.disabled = false;
+                    delete b.dataset.locked;
+                    if (b.dataset.originalText) {
+                        b.textContent = b.dataset.originalText;
+                        delete b.dataset.originalText;
+                    }
+                });
+            });
         })();
     </script>
 </th:block>

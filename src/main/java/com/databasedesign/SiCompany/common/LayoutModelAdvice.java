@@ -32,7 +32,8 @@ public class LayoutModelAdvice {
         CurrentUser currentUser = currentUserService.findCurrentUser(request.getSession(false)).orElse(null);
         model.put("selectableUsers", currentUserService.findSelectableUsers());
         model.put("currentUser", currentUser);
-        model.put("currentPath", request.getRequestURI());
+        // POST 처리 중 오류 화면에서 사용자를 바꾸면 그 POST 주소를 GET으로 다시 열 수 없으므로 홈으로 돌아간다.
+        model.put("currentPath", "GET".equalsIgnoreCase(request.getMethod()) ? request.getRequestURI() : "/");
         model.put("menuGroups", Menus.visibleTo(currentUser));
     }
 }
