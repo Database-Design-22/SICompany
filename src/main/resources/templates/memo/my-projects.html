@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('내 프로젝트')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 내 업무</nav>
+    <h1 class="h3">내 프로젝트</h1>
+    <p class="text-secondary">참여 중인 진행·지연 프로젝트입니다. 프로젝트를 고르면 메모를 남길 수 있는 팀원이 나옵니다.</p>
+
+    <div class="alert alert-light border" th:if="${projects.isEmpty()}">
+        참여 중인 진행·지연 프로젝트가 없습니다.
+    </div>
+
+    <table class="table table-hover align-middle" th:unless="${projects.isEmpty()}">
+        <thead class="table-light">
+        <tr>
+            <th>프로젝트</th>
+            <th>발주처</th>
+            <th>상태</th>
+            <th>내 직무</th>
+            <th>내 투입 기간</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${projects}">
+            <td>
+                <div class="fw-semibold" th:text="${p.prjNm}">프로젝트명</div>
+                <div class="small text-secondary" th:text="${p.prjId}">P26-000</div>
+            </td>
+            <td th:text="${p.clientNm}">발주처</td>
+            <td>
+                <span class="badge" th:classappend="${p.prjStat == '지연'} ? 'text-bg-warning' : 'text-bg-primary'"
+                      th:text="${p.prjStat}">진행</span>
+            </td>
+            <td th:text="|${p.roleNm} (${p.roleId})|">PM</td>
+            <td>
+                <span th:text="${p.myStrtDt}">2026-01-01</span> ~
+                <span th:text="${p.myEndDt != null} ? ${p.myEndDt} : '투입 중'">투입 중</span>
+            </td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" th:href="@{/my/projects/{id}(id=${p.prjId})}">팀원과 메모</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

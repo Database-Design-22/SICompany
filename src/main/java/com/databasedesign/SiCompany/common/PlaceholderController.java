@@ -22,7 +22,7 @@ public class PlaceholderController {
             // 공통
             "/me", "/certificates",
             // 내 업무
-            "/my/projects", "/memos", "/evaluations", "/evaluations/customer",
+            "/evaluations", "/evaluations/customer",
             // 인력 관리
             "/replacements", "/designations", "/staffing", "/projects", "/certificates/issue",
             // 경영 현황

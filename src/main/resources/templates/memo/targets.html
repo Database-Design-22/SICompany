@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${participation.prjNm})}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> / <a th:href="@{/my/projects}">내 프로젝트</a>
+    </nav>
+    <h1 class="h3">
+        <span th:text="${participation.prjNm}">프로젝트명</span>
+        <small class="text-secondary fs-6" th:text="|${participation.prjId} · ${participation.prjStat} · 내 직무 ${participation.roleId}|"></small>
+    </h1>
+
+    <p class="text-secondary" th:if="${participation.pm}">
+        PM이므로 이 프로젝트의 팀원 전원에게 메모를 남길 수 있습니다.
+    </p>
+    <p class="text-secondary" th:unless="${participation.pm}">
+        이 프로젝트에서 나와 투입 기간이 하루 이상 겹친 직원에게만 메모를 남길 수 있습니다.
+    </p>
+
+    <div class="alert alert-light border" th:if="${targets.isEmpty()}">
+        메모를 남길 수 있는 직원이 없습니다.
+    </div>
+
+    <table class="table table-hover align-middle" th:unless="${targets.isEmpty()}">
+        <thead class="table-light">
+        <tr>
+            <th>직원</th>
+            <th>직무</th>
+            <th>내 메모</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="t : ${targets}">
+            <td>
+                <span class="fw-semibold" th:text="${t.empNm}">이름</span>
+                <span class="small text-secondary" th:text="${t.empId}">직원ID</span>
+            </td>
+            <td th:text="|${t.roleNm} (${t.roleId})|">직무</td>
+            <td th:text="|${t.memoCnt}건|">0건</td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary"
+                   th:href="@{/memos/{p}/{t}(p=${participation.prjId}, t=${t.empId})}">메모 보기·쓰기</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

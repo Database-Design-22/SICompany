@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('평가메모')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 내 업무</nav>
+    <h1 class="h3">평가메모</h1>
+    <p class="text-secondary">
+        내가 쓴 메모 전체입니다. 새 메모는 <a th:href="@{/my/projects}">내 프로젝트</a>에서 팀원을 골라 씁니다.
+    </p>
+
+    <div class="alert alert-light border" th:if="${memos.isEmpty()}">아직 쓴 메모가 없습니다.</div>
+
+    <table class="table table-hover align-middle" th:unless="${memos.isEmpty()}">
+        <thead class="table-light">
+        <tr>
+            <th>프로젝트</th>
+            <th>대상</th>
+            <th>내용</th>
+            <th class="text-nowrap">작성·수정</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="m : ${memos}">
+            <td>
+                <div th:text="${m.prjNm}">프로젝트명</div>
+                <div class="small text-secondary" th:text="|${m.prjId} · ${m.prjStat}|">P26-000 · 진행</div>
+            </td>
+            <td>
+                <span th:text="${m.trgtEmpNm}">이름</span>
+                <span class="small text-secondary" th:text="${m.trgtEmpId}">직원ID</span>
+            </td>
+            <td class="small" style="max-width: 28rem" th:text="${m.memoCn}">내용</td>
+            <td class="small text-nowrap">
+                <div th:text="${#temporals.format(m.wrtDttm, 'yyyy-MM-dd HH:mm')}">작성</div>
+                <div class="text-secondary" th:if="${m.modDttm != null}"
+                     th:text="|수정 ${#temporals.format(m.modDttm, 'yyyy-MM-dd HH:mm')}|">수정</div>
+            </td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary"
+                   th:href="@{/memos/{p}/{t}(p=${m.prjId}, t=${m.trgtEmpId})}">열기</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

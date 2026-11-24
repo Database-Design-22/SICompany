@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(|${page.target.empNm} 메모|)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4" th:with="p=${page.participation}, t=${page.target}, blocked=${page.blockedReason != null}">
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> /
+        <a th:href="@{/my/projects}">내 프로젝트</a> /
+        <a th:href="@{/my/projects/{id}(id=${p.prjId})}" th:text="${p.prjNm}">프로젝트</a>
+    </nav>
+    <h1 class="h3">
+        <span th:text="${t.empNm}">이름</span>
+        <small class="text-secondary fs-6" th:text="|${t.empId} · ${t.roleNm}|"></small>
+    </h1>
+    <p class="text-secondary">이 메모는 나만 볼 수 있고, 평가를 제출하면 삭제됩니다.</p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">저장했습니다.</div>
+    <div class="alert alert-warning" th:if="${blocked}" th:text="${page.blockedReason}">막힌 이유</div>
+
+    <!-- 새 메모 -->
+    <form method="post" th:action="@{/memos}" class="card card-body mb-4">
+        <input type="hidden" name="prjId" th:value="${p.prjId}">
+        <input type="hidden" name="trgtEmpId" th:value="${t.empId}">
+        <label for="new-memo" class="form-label fw-semibold">새 메모</label>
+        <textarea id="new-memo" name="memoCn" class="form-control mb-2" rows="3" maxlength="1000"
+                  th:disabled="${blocked}" placeholder="함께 일하며 기억해 둘 내용을 적으세요. (1000자까지)"></textarea>
+        <div><button type="submit" class="btn btn-primary btn-sm" th:disabled="${blocked}">저장</button></div>
+    </form>
+
+    <!-- 내가 쓴 메모 -->
+    <h2 class="h5">내가 쓴 메모 <span class="text-secondary" th:text="|${page.memos.size()}건|">0건</span></h2>
+    <div class="alert alert-light border" th:if="${page.memos.isEmpty()}">아직 쓴 메모가 없습니다.</div>
+
+    <div class="card mb-3" th:each="m : ${page.memos}">
+        <div class="card-body">
+            <div class="small text-secondary mb-2">
+                #<span th:text="${m.memoId}">1</span> ·
+                작성 <span th:text="${#temporals.format(m.wrtDttm, 'yyyy-MM-dd HH:mm')}">일시</span>
+                <span th:if="${m.modDttm != null}">· 수정 <span th:text="${#temporals.format(m.modDttm, 'yyyy-MM-dd HH:mm')}">일시</span></span>
+            </div>
+            <form method="post" th:action="@{/memos/{id}/edit(id=${m.memoId})}">
+                <textarea name="memoCn" class="form-control mb-2" rows="3" maxlength="1000"
+                          th:disabled="${blocked}" th:text="${m.memoCn}">내용</textarea>
+                <button type="submit" class="btn btn-outline-primary btn-sm" th:disabled="${blocked}">수정</button>
+            </form>
+            <form method="post" th:action="@{/memos/{id}/delete(id=${m.memoId})}" class="mt-2"
+                  onsubmit="return confirm('이 메모를 삭제할까요?');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">삭제</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
