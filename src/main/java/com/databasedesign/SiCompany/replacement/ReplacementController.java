@@ -73,7 +73,8 @@ public class ReplacementController {
         String message = "교체 요청 " + replReqId + "번을 오늘 날짜로 수용했습니다. 대상 투입을 '고객 교체 요청'으로 종료했습니다.";
         if (result.succHistId() != null) {
             message += " 후임 " + result.succEmpId() + "의 투입 이력 " + result.succHistId() + "번을 열었습니다"
-                    + (result.ptcpCreated() ? " (프로젝트참여 새로 생성)." : " (기존 프로젝트참여 사용, 재투입).");
+                    + (result.ptcpCreated() ? " (프로젝트참여 새로 생성)." : " (기존 프로젝트참여 사용, 재투입).")
+                    + (result.succExcluded() ? " ※ 후임은 이 발주처의 제외 인력이며, 확인 후 배정했습니다." : "");
         }
         redirect.addFlashAttribute("notice", message);
         redirect.addFlashAttribute("newReqId", replReqId);

@@ -56,10 +56,12 @@
                     <tr><th></th><th>직원</th><th>기술등급</th><th>마지막 투입 종료</th><th></th></tr>
                     </thead>
                     <tbody>
-                    <tr th:each="c : ${candidates}">
+                    <tr th:each="c : ${candidates}"
+                        th:classappend="${c.nominated} ? 'table-primary' : (${c.excluded} ? 'table-danger' : '')">
                         <td>
                             <input class="form-check-input" type="radio" name="succEmpId"
-                                   th:id="|succ-${c.empId}|" th:value="${c.empId}">
+                                   th:id="|succ-${c.empId}|" th:value="${c.empId}"
+                                   th:attr="data-warning=${c.excluded} ? ${c.exclusionWarning()} : null">
                         </td>
                         <td>
                             <label th:for="|succ-${c.empId}|">
@@ -69,8 +71,16 @@
                         </td>
                         <td th:text="${c.grdNm}">고급</td>
                         <td th:text="${c.lastEndDt != null} ? ${c.lastEndDt} : '투입 기록 없음'">2026-09-22</td>
-                        <td>
+                        <td class="small">
                             <span class="badge text-bg-info" th:if="${c.ptcp}">이 프로젝트 참여 기록 있음 (재투입)</span>
+                            <span class="badge text-bg-primary" th:if="${c.nominated}">발주처 지명</span>
+                            <th:block th:if="${c.excluded}">
+                                <span class="badge text-bg-danger">⚠ 발주처 제외</span>
+                                <div th:if="${c.desigReqId != null}"
+                                     th:text="|근거: 교체 요청 ${c.desigReqId} (${c.desigReqDt}, 담당자 ${c.desigReqMgrNm})|">근거</div>
+                                <div class="text-secondary" th:if="${c.desigReqId == null}"
+                                     th:text="|교체 요청 없이 지정: ${c.desigRsn}|">사전 제외</div>
+                            </th:block>
                         </td>
                     </tr>
                     </tbody>
@@ -78,7 +88,7 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary"
+        <button type="submit" id="accept-button" class="btn btn-primary"
                 data-confirm="수용하면 대상 투입이 오늘로 끝나고 되돌릴 수 없습니다. 수용할까요?">수용</button>
         <a class="btn btn-outline-secondary" th:href="@{/replacements}">취소</a>
     </form>
@@ -86,5 +96,21 @@
 
 <div th:replace="~{fragments/layout :: sql}"></div>
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    // 발주처 제외 인력을 후임으로 고르면 확인 창에 경고와 근거를 덧붙인다. (막지는 않는다)
+    (() => {
+        const button = document.getElementById('accept-button');
+        if (!button) {
+            return;
+        }
+        const base = button.dataset.confirm;
+        document.querySelectorAll('input[name=succEmpId]').forEach((radio) => {
+            radio.addEventListener('change', () => {
+                const warning = radio.dataset.warning;
+                button.dataset.confirm = warning ? '⚠ ' + warning + '\n\n' + base : base;
+            });
+        });
+    })();
+</script>
 </body>
 </html>

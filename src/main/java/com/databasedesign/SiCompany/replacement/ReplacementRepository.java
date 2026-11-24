@@ -131,7 +131,11 @@ public class ReplacementRepository {
             WHERE r.REPL_REQ_ID = ?
             """;
 
-    /** 10. 후임 후보: 지금 투입 중이 아닌 재직 개발직원 (대상 제외, 이 프로젝트 참여 기록이 있으면 먼저) */
+    /**
+     * 10. 후임 후보: 지금 투입 중이 아닌 재직 개발직원 (대상 제외)
+     * 그 발주처의 유효한 지정(지명/제외)과 제외의 근거 요청을 함께 가져온다. 지명은 위, 제외는 아래.
+     * 파라미터: 프로젝트ID, 발주처ID, 교체 대상 직원ID
+     */
     public static final String FIND_SUCCESSOR_CANDIDATES = """
             SELECT d.EMP_ID, e.EMP_NM, g.GRD_NM,
                    (SELECT MAX(h2.END_DT)
@@ -140,17 +144,27 @@ public class ReplacementRepository {
                    EXISTS (SELECT 1
                            FROM TB_PRJ_PTCP pt
                            WHERE pt.EMP_ID = d.EMP_ID
-                             AND pt.PRJ_ID = ?) AS PTCP_YN
+                             AND pt.PRJ_ID = ?) AS PTCP_YN,
+                   ds.DESIG_DIV, ds.DESIG_RSN, ds.REPL_REQ_ID AS DESIG_REQ_ID,
+                   rq.REQ_DT AS DESIG_REQ_DT, mg.MGR_NM AS DESIG_REQ_MGR_NM
             FROM TB_DEV_EMP d
             JOIN TB_EMP e ON e.EMP_ID = d.EMP_ID
             LEFT JOIN TB_SKILL_GRD g ON g.GRD_ID = d.GRD_ID
+            LEFT JOIN TB_CLIENT_DESIG_STAFF ds
+                   ON ds.CLIENT_ID = ?
+                  AND ds.EMP_ID = d.EMP_ID
+                  AND ds.DESIG_DT <= CURDATE()
+                  AND (ds.RLS_DT IS NULL OR ds.RLS_DT > CURDATE())
+            LEFT JOIN TB_STAFF_REPL_REQ rq ON rq.REPL_REQ_ID = ds.REPL_REQ_ID
+            LEFT JOIN TB_CLIENT_MGR mg     ON mg.CLIENT_ID = rq.CLIENT_ID AND mg.MGR_ID = rq.MGR_ID
             WHERE e.EMPL_STAT = '재직'
               AND d.EMP_ID <> ?
               AND NOT EXISTS (SELECT 1
                               FROM TB_PRJ_HIST h
                               WHERE h.EMP_ID = d.EMP_ID
                                 AND h.END_DT IS NULL)
-            ORDER BY PTCP_YN DESC, FIELD(d.GRD_ID, 'EX', 'SR', 'MD', 'JR'), e.EMP_NM
+            ORDER BY CASE ds.DESIG_DIV WHEN '지명' THEN 0 WHEN '제외' THEN 2 ELSE 1 END,
+                     PTCP_YN DESC, FIELD(d.GRD_ID, 'EX', 'SR', 'MD', 'JR'), e.EMP_NM
             """;
 
     /** 수용 ①: 요청 상태 변경 (접수일 때만) */
@@ -229,13 +243,18 @@ public class ReplacementRepository {
                 rs.getString("PRJ_STAT")), replReqId).stream().findFirst();
     }
 
-    public List<SuccessorCandidate> findSuccessorCandidates(String prjId, String trgtEmpId) {
+    public List<SuccessorCandidate> findSuccessorCandidates(String prjId, int clientId, String trgtEmpId) {
         return jdbcTemplate.query(FIND_SUCCESSOR_CANDIDATES, (rs, i) -> new SuccessorCandidate(
                 rs.getString("EMP_ID"),
                 rs.getString("EMP_NM"),
                 rs.getString("GRD_NM"),
                 rs.getObject("LAST_END_DT", LocalDate.class),
-                rs.getBoolean("PTCP_YN")), prjId, trgtEmpId);
+                rs.getBoolean("PTCP_YN"),
+                rs.getString("DESIG_DIV"),
+                rs.getString("DESIG_RSN"),
+                rs.getObject("DESIG_REQ_ID", Integer.class),
+                rs.getObject("DESIG_REQ_DT", LocalDate.class),
+                rs.getString("DESIG_REQ_MGR_NM")), prjId, clientId, trgtEmpId);
     }
 
     public int acceptRequest(int replReqId, LocalDate procDt) {

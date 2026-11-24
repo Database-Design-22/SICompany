@@ -117,7 +117,7 @@ public class ReplacementService {
     }
 
     public List<SuccessorCandidate> findSuccessorCandidates(RequestDetail request) {
-        return replacementRepository.findSuccessorCandidates(request.prjId(), request.trgtEmpId());
+        return replacementRepository.findSuccessorCandidates(request.prjId(), request.clientId(), request.trgtEmpId());
     }
 
     /**
@@ -143,14 +143,17 @@ public class ReplacementService {
         }
 
         String successor = (succEmpId == null || succEmpId.isBlank()) ? null : succEmpId.strip();
+        SuccessorCandidate succCandidate = null;
         if (successor != null) {
             if (successor.equals(request.trgtEmpId())) {
                 throw new BusinessException("교체 대상과 다른 직원을 후임으로 고르세요.");
             }
-            boolean candidate = findSuccessorCandidates(request).stream().anyMatch(c -> c.empId().equals(successor));
-            if (!candidate) {
-                throw new BusinessException("후임은 지금 다른 프로젝트에 투입 중이 아닌 재직 개발직원이어야 합니다. (" + successor + ")");
-            }
+            succCandidate = findSuccessorCandidates(request).stream()
+                    .filter(c -> c.empId().equals(successor))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(
+                            "후임은 지금 다른 프로젝트에 투입 중이 아닌 재직 개발직원이어야 합니다. (" + successor + ")"));
+            // 그 발주처의 제외 인력이어도 막지는 않는다 (화면에서 확인 창만 띄운다).
         }
 
         // ① 요청 상태 변경
@@ -162,7 +165,7 @@ public class ReplacementService {
             throw new BusinessException("대상 투입이 이미 끝났습니다. (이력 " + request.trgtHistId() + ")");
         }
         if (successor == null) {
-            return new AcceptResult(null, null, false);
+            return new AcceptResult(null, null, false, false);
         }
         // ③ 후임 참여 (재투입이면 이미 있으므로 만들지 않는다. 직무는 바꿀 수 없다)
         boolean ptcpCreated = false;
@@ -174,7 +177,7 @@ public class ReplacementService {
         int succHistId = replacementRepository.insertSuccessorHist(successor, request.prjId(), procDt.plusDays(1));
         // ⑤ 후임이력ID 연결
         replacementRepository.linkSuccessorHist(replReqId, succHistId);
-        return new AcceptResult(succHistId, successor, ptcpCreated);
+        return new AcceptResult(succHistId, successor, ptcpCreated, succCandidate.isExcluded());
     }
 
     /** 철회: 처리일자는 오늘 */

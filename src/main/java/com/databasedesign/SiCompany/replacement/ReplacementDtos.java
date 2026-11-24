@@ -44,12 +44,32 @@ public final class ReplacementDtos {
         }
     }
 
-    /** 후임 후보. ptcp: 이 프로젝트에 참여 기록이 있으면 재투입 */
-    public record SuccessorCandidate(String empId, String empNm, String grdNm, LocalDate lastEndDt, boolean ptcp) {
+    /**
+     * 후임 후보. ptcp: 이 프로젝트에 참여 기록이 있으면 재투입.
+     * desigDiv: 그 발주처의 유효한 지정 ('지명', '제외', 없으면 null), desigReqId 등: 제외의 근거 교체 요청
+     */
+    public record SuccessorCandidate(String empId, String empNm, String grdNm, LocalDate lastEndDt, boolean ptcp,
+                                     String desigDiv, String desigRsn, Integer desigReqId,
+                                     LocalDate desigReqDt, String desigReqMgrNm) {
+        public boolean isNominated() {
+            return "지명".equals(desigDiv);
+        }
+
+        public boolean isExcluded() {
+            return "제외".equals(desigDiv);
+        }
+
+        /** 제외 인력을 후임으로 고를 때 확인 창에 보여 줄 말 */
+        public String exclusionWarning() {
+            String basis = desigReqId == null
+                    ? "교체 요청 없이 지정 (" + desigRsn + ")"
+                    : "교체 요청 " + desigReqId + " (" + desigReqDt + ", 담당자 " + desigReqMgrNm + ")";
+            return empNm + "은(는) 이 발주처의 제외 인력입니다.\n근거: " + basis;
+        }
     }
 
-    /** 수용 결과. succHistId가 null이면 후임 없이 수용했다. */
-    public record AcceptResult(Integer succHistId, String succEmpId, boolean ptcpCreated) {
+    /** 수용 결과. succHistId가 null이면 후임 없이 수용했다. succExcluded: 후임이 그 발주처의 제외 인력 */
+    public record AcceptResult(Integer succHistId, String succEmpId, boolean ptcpCreated, boolean succExcluded) {
     }
 
     /** 등록할 때 검사하는 대상 이력 */
