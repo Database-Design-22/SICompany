@@ -15,6 +15,8 @@ import com.databasedesign.SiCompany.replacement.ReplacementDtos.ActiveProject;
 import com.databasedesign.SiCompany.replacement.ReplacementDtos.ClientManager;
 import com.databasedesign.SiCompany.replacement.ReplacementDtos.ReplRequest;
 import com.databasedesign.SiCompany.replacement.ReplacementDtos.ReplaceableHist;
+import com.databasedesign.SiCompany.replacement.ReplacementDtos.RequestDetail;
+import com.databasedesign.SiCompany.replacement.ReplacementDtos.SuccessorCandidate;
 import com.databasedesign.SiCompany.replacement.ReplacementDtos.TargetHist;
 
 import lombok.RequiredArgsConstructor;
@@ -110,7 +112,166 @@ public class ReplacementRepository {
             VALUES (?, ?, '접수', ?, ?, ?)
             """;
 
+    /** 9. 요청 한 건 (수용 화면, 처리 검사용) */
+    public static final String FIND_REQUEST_DETAIL = """
+            SELECT r.REPL_REQ_ID, r.PROC_STAT, r.REQ_DT, r.REQ_RSN, r.CLIENT_ID, c.CLIENT_NM, m.MGR_NM,
+                   h.PRJ_HIST_ID, h.EMP_ID AS TRGT_EMP_ID, e.EMP_NM AS TRGT_EMP_NM, pt.ROLE_ID AS TRGT_ROLE_ID,
+                   h.STRT_DT AS TRGT_STRT_DT, h.END_DT AS TRGT_END_DT,
+                   p.PRJ_ID, p.PRJ_NM, p.PRJ_STAT
+            FROM TB_STAFF_REPL_REQ r
+            JOIN TB_CLIENT c      ON c.CLIENT_ID = r.CLIENT_ID
+            JOIN TB_CLIENT_MGR m  ON m.CLIENT_ID = r.CLIENT_ID AND m.MGR_ID = r.MGR_ID
+            JOIN TB_PRJ_HIST h    ON h.PRJ_HIST_ID = r.REPL_TRGT_HIST_ID
+            JOIN TB_PRJ_PTCP pt   ON pt.EMP_ID = h.EMP_ID AND pt.PRJ_ID = h.PRJ_ID
+            JOIN TB_EMP e         ON e.EMP_ID = h.EMP_ID
+            JOIN TB_PRJ p         ON p.PRJ_ID = h.PRJ_ID
+            WHERE r.REPL_REQ_ID = ?
+            """;
+
+    /** 10. 후임 후보: 지금 투입 중이 아닌 재직 개발직원 (대상 제외, 이 프로젝트 참여 기록이 있으면 먼저) */
+    public static final String FIND_SUCCESSOR_CANDIDATES = """
+            SELECT d.EMP_ID, e.EMP_NM, g.GRD_NM,
+                   (SELECT MAX(h2.END_DT)
+                    FROM TB_PRJ_HIST h2
+                    WHERE h2.EMP_ID = d.EMP_ID) AS LAST_END_DT,
+                   EXISTS (SELECT 1
+                           FROM TB_PRJ_PTCP pt
+                           WHERE pt.EMP_ID = d.EMP_ID
+                             AND pt.PRJ_ID = ?) AS PTCP_YN
+            FROM TB_DEV_EMP d
+            JOIN TB_EMP e ON e.EMP_ID = d.EMP_ID
+            LEFT JOIN TB_SKILL_GRD g ON g.GRD_ID = d.GRD_ID
+            WHERE e.EMPL_STAT = '재직'
+              AND d.EMP_ID <> ?
+              AND NOT EXISTS (SELECT 1
+                              FROM TB_PRJ_HIST h
+                              WHERE h.EMP_ID = d.EMP_ID
+                                AND h.END_DT IS NULL)
+            ORDER BY PTCP_YN DESC, FIELD(d.GRD_ID, 'EX', 'SR', 'MD', 'JR'), e.EMP_NM
+            """;
+
+    /** 수용 ①: 요청 상태 변경 (접수일 때만) */
+    public static final String ACCEPT_REQUEST = """
+            UPDATE TB_STAFF_REPL_REQ
+            SET PROC_STAT = '수용',
+                PROC_DT = ?
+            WHERE REPL_REQ_ID = ?
+              AND PROC_STAT = '접수'
+            """;
+
+    /** 수용 ②: 대상 이력 종료, 철수사유 '고객 교체 요청' (열려 있을 때만) */
+    public static final String CLOSE_TARGET_HIST = """
+            UPDATE TB_PRJ_HIST
+            SET END_DT = ?,
+                WTHDR_RSN_ID = 'CUST'
+            WHERE PRJ_HIST_ID = ?
+              AND END_DT IS NULL
+            """;
+
+    /** 수용 ③-1: 후임의 프로젝트참여가 있는지 */
+    public static final String COUNT_PTCP = """
+            SELECT COUNT(*)
+            FROM TB_PRJ_PTCP
+            WHERE EMP_ID = ?
+              AND PRJ_ID = ?
+            """;
+
+    /** 수용 ③-2: 참여가 없을 때만 대상과 같은 직무로 만든다 */
+    public static final String INSERT_PTCP = """
+            INSERT INTO TB_PRJ_PTCP (EMP_ID, PRJ_ID, ROLE_ID)
+            VALUES (?, ?, ?)
+            """;
+
+    /** 수용 ④: 후임 이력을 처리일자 다음 날부터 연다 */
+    public static final String INSERT_SUCCESSOR_HIST = """
+            INSERT INTO TB_PRJ_HIST (EMP_ID, PRJ_ID, STRT_DT)
+            VALUES (?, ?, ?)
+            """;
+
+    /** 수용 ⑤: 후임 이력 연결 */
+    public static final String LINK_SUCCESSOR_HIST = """
+            UPDATE TB_STAFF_REPL_REQ
+            SET SUCC_HIST_ID = ?
+            WHERE REPL_REQ_ID = ?
+            """;
+
+    /** 철회 (접수일 때만) */
+    public static final String WITHDRAW_REQUEST = """
+            UPDATE TB_STAFF_REPL_REQ
+            SET PROC_STAT = '철회',
+                PROC_DT = ?
+            WHERE REPL_REQ_ID = ?
+              AND PROC_STAT = '접수'
+            """;
+
     private final JdbcTemplate jdbcTemplate;
+
+    public Optional<RequestDetail> findRequestDetail(int replReqId) {
+        return jdbcTemplate.query(FIND_REQUEST_DETAIL, (rs, i) -> new RequestDetail(
+                rs.getInt("REPL_REQ_ID"),
+                rs.getString("PROC_STAT"),
+                rs.getObject("REQ_DT", LocalDate.class),
+                rs.getString("REQ_RSN"),
+                rs.getInt("CLIENT_ID"),
+                rs.getString("CLIENT_NM"),
+                rs.getString("MGR_NM"),
+                rs.getInt("PRJ_HIST_ID"),
+                rs.getString("TRGT_EMP_ID"),
+                rs.getString("TRGT_EMP_NM"),
+                rs.getString("TRGT_ROLE_ID"),
+                rs.getObject("TRGT_STRT_DT", LocalDate.class),
+                rs.getObject("TRGT_END_DT", LocalDate.class),
+                rs.getString("PRJ_ID"),
+                rs.getString("PRJ_NM"),
+                rs.getString("PRJ_STAT")), replReqId).stream().findFirst();
+    }
+
+    public List<SuccessorCandidate> findSuccessorCandidates(String prjId, String trgtEmpId) {
+        return jdbcTemplate.query(FIND_SUCCESSOR_CANDIDATES, (rs, i) -> new SuccessorCandidate(
+                rs.getString("EMP_ID"),
+                rs.getString("EMP_NM"),
+                rs.getString("GRD_NM"),
+                rs.getObject("LAST_END_DT", LocalDate.class),
+                rs.getBoolean("PTCP_YN")), prjId, trgtEmpId);
+    }
+
+    public int acceptRequest(int replReqId, LocalDate procDt) {
+        return jdbcTemplate.update(ACCEPT_REQUEST, procDt, replReqId);
+    }
+
+    public int closeTargetHist(int prjHistId, LocalDate endDt) {
+        return jdbcTemplate.update(CLOSE_TARGET_HIST, endDt, prjHistId);
+    }
+
+    public boolean existsPtcp(String empId, String prjId) {
+        Integer count = jdbcTemplate.queryForObject(COUNT_PTCP, Integer.class, empId, prjId);
+        return count != null && count > 0;
+    }
+
+    public void insertPtcp(String empId, String prjId, String roleId) {
+        jdbcTemplate.update(INSERT_PTCP, empId, prjId, roleId);
+    }
+
+    /** @return 새 프로젝트이력ID */
+    public int insertSuccessorHist(String empId, String prjId, LocalDate strtDt) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(con -> {
+            PreparedStatement ps = con.prepareStatement(INSERT_SUCCESSOR_HIST, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, empId);
+            ps.setString(2, prjId);
+            ps.setObject(3, strtDt);
+            return ps;
+        }, keyHolder);
+        return keyHolder.getKey().intValue();
+    }
+
+    public int linkSuccessorHist(int replReqId, int succHistId) {
+        return jdbcTemplate.update(LINK_SUCCESSOR_HIST, succHistId, replReqId);
+    }
+
+    public int withdrawRequest(int replReqId, LocalDate procDt) {
+        return jdbcTemplate.update(WITHDRAW_REQUEST, procDt, replReqId);
+    }
 
     public List<ReplRequest> findRequests(String procStat) {
         return jdbcTemplate.query(FIND_REQUESTS, (rs, i) -> new ReplRequest(

@@ -32,11 +32,11 @@
                 <th>요청</th>
                 <th>상태</th>
                 <th class="text-nowrap">요청일자</th>
-                <th>발주처 · 요청 담당자</th>
-                <th>프로젝트</th>
+                <th style="min-width: 9rem">발주처 · 요청 담당자</th>
+                <th style="min-width: 12rem">프로젝트</th>
                 <th class="text-nowrap">교체 대상</th>
                 <th class="text-nowrap">후임</th>
-                <th>사유</th>
+                <th style="min-width: 14rem">사유</th>
             </tr>
             </thead>
             <tbody>
@@ -47,6 +47,15 @@
                           th:classappend="${r.procStat == '접수'} ? 'text-bg-warning' : (${r.procStat == '수용'} ? 'text-bg-primary' : 'text-bg-secondary')"
                           th:text="${r.procStat}">접수</span>
                     <div class="small text-secondary text-nowrap" th:if="${r.procDt != null}" th:text="|처리 ${r.procDt}|">처리일</div>
+                    <div class="d-flex gap-1 mt-1" th:if="${r.procStat == '접수'}">
+                        <a class="btn btn-sm btn-primary text-nowrap"
+                           th:href="@{/replacements/{id}/accept(id=${r.replReqId})}">수용</a>
+                        <form method="post"
+                              th:action="@{/replacements/{id}/withdraw(id=${r.replReqId})}"
+                              th:attr="data-confirm=|교체 요청 ${r.replReqId}번을 오늘 날짜로 철회할까요?|">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">철회</button>
+                        </form>
+                    </div>
                 </td>
                 <td class="text-nowrap" th:text="${r.reqDt}">2026-11-08</td>
                 <td>

@@ -33,6 +33,25 @@ public final class ReplacementDtos {
     public record ClientManager(int mgrId, String mgrNm, boolean prjMgr) {
     }
 
+    /** 요청 한 건 (수용 화면, 처리 검사용) */
+    public record RequestDetail(int replReqId, String procStat, LocalDate reqDt, String reqRsn,
+                                int clientId, String clientNm, String mgrNm,
+                                int trgtHistId, String trgtEmpId, String trgtEmpNm, String trgtRoleId,
+                                LocalDate trgtStrtDt, LocalDate trgtEndDt,
+                                String prjId, String prjNm, String prjStat) {
+        public boolean isReceived() {
+            return "접수".equals(procStat);
+        }
+    }
+
+    /** 후임 후보. ptcp: 이 프로젝트에 참여 기록이 있으면 재투입 */
+    public record SuccessorCandidate(String empId, String empNm, String grdNm, LocalDate lastEndDt, boolean ptcp) {
+    }
+
+    /** 수용 결과. succHistId가 null이면 후임 없이 수용했다. */
+    public record AcceptResult(Integer succHistId, String succEmpId, boolean ptcpCreated) {
+    }
+
     /** 등록할 때 검사하는 대상 이력 */
     public record TargetHist(int prjHistId, String empId, String prjId, LocalDate strtDt, LocalDate endDt,
                              String roleId, String prjStat, int clientId) {

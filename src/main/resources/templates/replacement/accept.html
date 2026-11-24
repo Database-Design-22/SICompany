@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(|교체 요청 ${request.replReqId} 수용|)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4" th:with="r=${request}">
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> / <a th:href="@{/replacements}">교체 요청</a>
+    </nav>
+    <h1 class="h3" th:text="|교체 요청 ${r.replReqId}번 수용|">교체 요청 수용</h1>
+
+    <div class="alert alert-secondary" th:unless="${r.received}"
+         th:text="|이미 처리된 요청입니다. (현재: ${r.procStat})|">이미 처리됨</div>
+
+    <!-- 요청 내용 -->
+    <div class="card mb-3">
+        <div class="card-header fw-semibold">요청 내용</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">교체 대상</dt>
+                <dd class="col-sm-9">
+                    <span th:text="${r.trgtEmpNm}">이름</span>
+                    <span class="text-secondary" th:text="|${r.trgtEmpId} · 직무 ${r.trgtRoleId} · ${r.trgtStrtDt}부터 투입|"></span>
+                </dd>
+                <dt class="col-sm-3">프로젝트</dt>
+                <dd class="col-sm-9" th:text="|${r.prjNm} (${r.prjId}, ${r.prjStat})|">프로젝트</dd>
+                <dt class="col-sm-3">발주처 · 요청 담당자</dt>
+                <dd class="col-sm-9" th:text="|${r.clientNm} · ${r.mgrNm}|">발주처</dd>
+                <dt class="col-sm-3">요청일자</dt>
+                <dd class="col-sm-9" th:text="${r.reqDt}">2026-11-08</dd>
+                <dt class="col-sm-3">사유</dt>
+                <dd class="col-sm-9 mb-0" th:text="${r.reqRsn}">사유</dd>
+            </dl>
+        </div>
+    </div>
+
+    <form method="post" th:action="@{/replacements/{id}/accept(id=${r.replReqId})}" th:if="${r.received}">
+        <div class="alert alert-light border mb-3">
+            처리일자는 <strong th:text="|오늘(${today})|">오늘</strong>입니다.
+            수용하면 대상 투입을 오늘로 끝내고 철수사유를 '고객 교체 요청'으로 남깁니다.
+            후임을 고르면 <strong th:text="|내일(${today.plusDays(1)})|">내일</strong>부터 후임 투입을 엽니다.
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">
+                후임 (지금 투입 중이 아닌 재직 개발직원 <span th:text="|${candidates.size()}명|">0명</span>)
+            </div>
+            <div class="card-body" style="max-height: 24rem; overflow-y: auto">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="succEmpId" id="succ-none" value="" checked>
+                    <label class="form-check-label" for="succ-none">후임 없이 수용</label>
+                </div>
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                    <tr><th></th><th>직원</th><th>기술등급</th><th>마지막 투입 종료</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="c : ${candidates}">
+                        <td>
+                            <input class="form-check-input" type="radio" name="succEmpId"
+                                   th:id="|succ-${c.empId}|" th:value="${c.empId}">
+                        </td>
+                        <td>
+                            <label th:for="|succ-${c.empId}|">
+                                <span th:text="${c.empNm}">이름</span>
+                                <span class="small text-secondary" th:text="${c.empId}">직원ID</span>
+                            </label>
+                        </td>
+                        <td th:text="${c.grdNm}">고급</td>
+                        <td th:text="${c.lastEndDt != null} ? ${c.lastEndDt} : '투입 기록 없음'">2026-09-22</td>
+                        <td>
+                            <span class="badge text-bg-info" th:if="${c.ptcp}">이 프로젝트 참여 기록 있음 (재투입)</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary"
+                data-confirm="수용하면 대상 투입이 오늘로 끝나고 되돌릴 수 없습니다. 수용할까요?">수용</button>
+        <a class="btn btn-outline-secondary" th:href="@{/replacements}">취소</a>
+    </form>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
