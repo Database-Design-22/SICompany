@@ -13,6 +13,11 @@
     <p class="text-secondary mt-2">발주처 담당자가 요청한 인력 교체를 경영관리팀이 대신 등록하고 처리합니다.</p>
 
     <div class="alert alert-success" th:if="${notice}" th:text="${notice}">등록했습니다.</div>
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" th:if="${excludeReqId}">
+        <span>다음 단계: 이 직원을 그 발주처의 <strong>제외 인력</strong>으로 등록하면, 이후 같은 발주처 프로젝트에 배정할 때 경고가 뜹니다.</span>
+        <a class="btn btn-sm btn-danger" th:href="@{/designations/exclude(replReqId=${excludeReqId})}"
+           th:text="|요청 ${excludeReqId}번 제외 등록하러 가기|">제외 등록하러 가기</a>
+    </div>
 
     <form method="get" th:action="@{/replacements}" class="d-flex gap-2 align-items-center mb-3">
         <label for="stat" class="small text-secondary">처리상태</label>

@@ -77,6 +77,8 @@ public class ReplacementController {
         }
         redirect.addFlashAttribute("notice", message);
         redirect.addFlashAttribute("newReqId", replReqId);
+        // 수용 다음 단계(발주처 제외 등록)로 바로 이어갈 수 있게 목록 위에 버튼을 띄운다.
+        redirect.addFlashAttribute("excludeReqId", replReqId);
         return "redirect:/replacements";
     }
 

@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+
+import com.databasedesign.SiCompany.replacement.ReplacementDtos.SuccessorCandidate;
 
 /**
  * 교체 요청 수용이 한 트랜잭션으로 묶여 있는지 확인한다.
@@ -26,7 +29,6 @@ class ReplacementRollbackTest {
 
     private static final int REQUEST_ID = 10;      // P26-007 조민경(17-0001) 교체 요청
     private static final int TARGET_HIST_ID = 334; // 조민경의 P26-007 투입 이력
-    private static final String SUCCESSOR = "17-0004"; // 김지원 (지금 투입 중 아님)
 
     @Autowired
     private ReplacementService replacementService;
@@ -40,11 +42,16 @@ class ReplacementRollbackTest {
     @Test
     void 후임_이력_생성에서_실패하면_요청_상태와_대상_이력_종료까지_모두_롤백된다() {
         assumeTrue("접수".equals(requestRow().get("PROC_STAT")), "요청 10이 '접수' 상태일 때만 돌린다 (DB를 처음 상태로 되돌린 뒤 실행)");
+        // 후임은 지금 후보 중 아무나 (특정 직원에 묶으면 다른 시연으로 그 직원이 배정됐을 때 테스트가 깨진다)
+        List<SuccessorCandidate> candidates =
+                replacementService.findSuccessorCandidates(replacementService.getRequest(REQUEST_ID));
+        assumeTrue(!candidates.isEmpty(), "후임 후보가 있어야 돌린다");
+        String successor = candidates.get(0).empId();
 
         doThrow(new IllegalStateException("테스트용 실패: 후임 이력 생성"))
                 .when(replacementRepository).insertSuccessorHist(anyString(), anyString(), any(LocalDate.class));
 
-        assertThatThrownBy(() -> replacementService.accept(REQUEST_ID, SUCCESSOR))
+        assertThatThrownBy(() -> replacementService.accept(REQUEST_ID, successor))
                 .hasMessageContaining("테스트용 실패");
 
         Map<String, Object> request = requestRow();

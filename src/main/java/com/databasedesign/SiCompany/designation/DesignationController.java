@@ -1,5 +1,7 @@
 package com.databasedesign.SiCompany.designation;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Controller;
@@ -12,13 +14,15 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.databasedesign.SiCompany.common.CurrentUser;
 import com.databasedesign.SiCompany.common.ExecutedSql;
+import com.databasedesign.SiCompany.designation.DesignationDtos.AssignResult;
 import com.databasedesign.SiCompany.designation.DesignationDtos.ReplRequestForExclusion;
+import com.databasedesign.SiCompany.designation.DesignationDtos.StaffingProject;
 
 import lombok.RequiredArgsConstructor;
 
 /**
  * 발주처 지정인력 (시나리오 2, 경영관리팀만)
- * 수용된 교체 요청 → 제외 등록 / 지정인력 목록, 지명 등록, 해제
+ * 수용된 교체 요청 → 제외 등록 / 지정인력 목록, 지명 등록, 해제 / 인력 배정 (배정 후보 목록)
  */
 @Controller
 @RequiredArgsConstructor
@@ -65,6 +69,49 @@ public class DesignationController {
         redirect.addFlashAttribute("notice", "지정 " + desigId + "번을 오늘 날짜로 해제했습니다. 행은 남아 있습니다.");
         redirect.addFlashAttribute("newDesigId", desigId);
         return clientId == null ? "redirect:/designations" : "redirect:/designations?clientId=" + clientId;
+    }
+
+    /** 인력 배정: 프로젝트를 고르면 배정 후보 목록 */
+    @GetMapping("/staffing")
+    public String staffing(@RequestParam(required = false) String prjId, CurrentUser user, Model model) {
+        user.require(CurrentUser.MGT);
+        model.addAttribute("projects", designationService.findStaffingProjects());
+        List<ExecutedSql> sqls = new ArrayList<>(List.of(
+                new ExecutedSql("진행/지연 프로젝트", DesignationRepository.FIND_STAFFING_PROJECTS)));
+        if (prjId != null && !prjId.isBlank()) {
+            StaffingProject project = designationService.getStaffingProject(prjId);
+            model.addAttribute("project", project);
+            model.addAttribute("candidates", designationService.findCandidates(prjId));
+            model.addAttribute("roles", designationService.findRoles());
+            model.addAttribute("hasPm", designationService.hasPm(prjId));
+            LocalDate today = LocalDate.now();
+            model.addAttribute("defaultStrtDt", today.isBefore(project.strtDt()) ? project.strtDt() : today);
+            sqls.addAll(List.of(
+                    new ExecutedSql("배정 후보 목록 (지명·제외와 근거 교체 요청 포함)", DesignationRepository.FIND_CANDIDATES),
+                    new ExecutedSql("직무 목록", DesignationRepository.FIND_ROLES),
+                    new ExecutedSql("PM이 있는지", DesignationRepository.COUNT_PM),
+                    new ExecutedSql("배정할 때 ①: 투입 기간이 겹치는 이력", DesignationRepository.FIND_LATEST_OVERLAP_END),
+                    new ExecutedSql("배정할 때 ②: 이 프로젝트 참여가 있는지", DesignationRepository.FIND_PTCP_ROLE),
+                    new ExecutedSql("배정할 때 ③: 참여가 없으면 참여 생성", DesignationRepository.INSERT_PTCP),
+                    new ExecutedSql("배정할 때 ④: 투입 이력 생성", DesignationRepository.INSERT_HIST)));
+        }
+        model.addAttribute("executedSqls", sqls);
+        return "designation/staffing";
+    }
+
+    @PostMapping("/staffing/assign")
+    public String assign(@RequestParam String prjId,
+                         @RequestParam(required = false) String empId,
+                         @RequestParam(required = false) String roleId,
+                         @RequestParam(required = false) String strtDt,
+                         CurrentUser user, RedirectAttributes redirect) {
+        user.require(CurrentUser.MGT);
+        AssignResult result = designationService.assign(prjId, empId, roleId, strtDt);
+        redirect.addFlashAttribute("notice", empId + "을(를) " + prjId + "에 " + result.roleId() + " 직무로 배정했습니다."
+                + " 투입 이력 " + result.prjHistId() + "번 (" + strtDt + "부터)"
+                + (result.ptcpCreated() ? ", 프로젝트참여 새로 생성." : ", 기존 프로젝트참여 사용 (재투입).")
+                + (result.excluded() ? " ※ 이 발주처의 제외 인력을 확인 후 배정했습니다." : ""));
+        return "redirect:/staffing?prjId=" + prjId;
     }
 
     /** 수용된 교체 요청에서 제외 등록 */
