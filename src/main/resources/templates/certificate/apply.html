@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('경력증명서 신청')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 공통</nav>
+    <h1 class="h3">경력증명서 신청</h1>
+    <p class="text-secondary">
+        기재할 항목과 용도, 증명서에 넣을 프로젝트 참여를 골라 신청합니다. 경영관리팀이 확인한 뒤 진위확인번호를 붙여 발급합니다.
+        평가 결과, 철수 사유처럼 회사 안에서만 쓰는 정보는 기재하지 않습니다.
+    </p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">신청했습니다.</div>
+    <div class="alert alert-warning" th:unless="${canApply}"
+         th:text="|계속 30일 이상 근무한 직원만 신청할 수 있습니다. (입사 ${applicant.hireDt})|">30일</div>
+
+    <form method="post" th:action="@{/certificates}" class="card mb-4" th:if="${canApply}"
+          data-confirm="이 내용으로 경력증명서를 신청할까요?">
+        <div class="card-header">새 신청</div>
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <div class="form-label small">기재 항목 (성명은 항상 기재)</div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="prd" name="emplPrdStmtYn" value="Y" checked>
+                    <label class="form-check-label" for="prd">재직기간</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="blng" name="blngStmtYn" value="Y" checked>
+                    <label class="form-check-label" for="blng">소속</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small" for="usg">용도</label>
+                <input class="form-control" id="usg" name="usg" maxlength="100" placeholder="이직 서류 제출">
+            </div>
+            <div class="col-12" th:if="${applicant.dev}">
+                <div class="form-label small">수록할 프로젝트 참여 (현재 재직기간에 투입한 프로젝트)</div>
+                <div class="alert alert-light border mb-0" th:if="${participations.isEmpty()}">수록할 수 있는 참여가 없습니다.</div>
+                <div class="table-responsive mb-0" th:unless="${participations.isEmpty()}">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                        <tr><th style="width: 2.5rem"></th><th>프로젝트</th><th>발주처</th><th>직무</th><th>투입</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${participations}">
+                            <td><input class="form-check-input" type="checkbox" name="prjIds" th:value="${p.prjId}" th:id="|p-${p.prjId}|"></td>
+                            <td><label th:for="|p-${p.prjId}|" th:text="${p.prjNm}">프로젝트</label>
+                                <span class="small text-secondary" th:text="${p.prjId}">ID</span></td>
+                            <td class="small" th:text="${p.clientNm}">발주처</td>
+                            <td class="small text-nowrap" th:text="${p.roleNm}">PG</td>
+                            <td class="small text-nowrap" th:text="|${p.firstStrtDt} ~ ${p.ongoing ? '투입 중' : p.lastEndDt}|">기간</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-12 small text-secondary" th:unless="${applicant.dev}">
+                비개발직원은 수록할 프로젝트 없이 재직기간과 소속만 기재합니다.
+            </div>
+            <div class="col-12"><button type="submit" class="btn btn-primary btn-sm">신청</button></div>
+        </div>
+    </form>
+
+    <h2 class="h5">내 신청·발급 이력 <span class="text-secondary fs-6" th:text="|${certs.size()}건|">0건</span></h2>
+    <div class="alert alert-light border" th:if="${certs.isEmpty()}">신청한 경력증명서가 없습니다.</div>
+    <th:block th:unless="${certs.isEmpty()}"><div th:replace="~{certificate/fragments :: certTable(${certs}, false)}"></div></th:block>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

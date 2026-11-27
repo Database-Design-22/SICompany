@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('경력증명서 발급')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 인력 관리</nav>
+    <h1 class="h3">경력증명서 발급</h1>
+    <p class="text-secondary">
+        신청된 경력증명서를 확인하고 발급합니다. 발급하면 성명·재직기간·소속과 수록할 프로젝트의 이름·발주처·직무·투입기간을
+        그때 값으로 증명서에 복사합니다. 나중에 원본이 바뀌어도 증명서 내용은 그대로이고, 발급한 증명서는 고칠 수 없습니다.
+    </p>
+
+    <div class="alert alert-light border" th:if="${certs.isEmpty()}">신청된 경력증명서가 없습니다.</div>
+
+    <th:block th:unless="${certs.isEmpty()}"><div th:replace="~{certificate/fragments :: certTable(${certs}, true)}"></div></th:block>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

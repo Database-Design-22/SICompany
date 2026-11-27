@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- 증명서 목록 표 (신청 화면에서도 쓴다). withIssue: 발급 버튼 보이기 -->
+    <div class="table-responsive" th:fragment="certTable(certs, withIssue)">
+        <table class="table align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>번호</th>
+                <th th:if="${withIssue}">대상 직원</th>
+                <th>신청</th>
+                <th>기재</th>
+                <th>용도</th>
+                <th class="text-end">수록</th>
+                <th>발급</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="c : ${certs}" th:classappend="${!c.issued and withIssue} ? 'table-warning'">
+                <td class="text-secondary" th:text="${c.certId}">1</td>
+                <td class="text-nowrap" th:if="${withIssue}">
+                    <span th:text="${c.trgtEmpNm}">이름</span>
+                    <span class="small text-secondary" th:text="${c.trgtEmpId}">ID</span>
+                </td>
+                <td class="text-nowrap small">
+                    <div th:text="${c.aplcDt}">신청일</div>
+                    <div class="text-secondary" th:text="${c.aplcMthd}">본인</div>
+                </td>
+                <td class="small text-nowrap"
+                    th:text="|성명${c.emplPrdStmtYn == 'Y' ? ' · 재직기간' : ''}${c.blngStmtYn == 'Y' ? ' · 소속' : ''}|">성명</td>
+                <td class="small" th:text="${c.usg != null} ? ${c.usg} : '-'">용도</td>
+                <td class="text-end" th:text="|${c.inclCnt}건|">0건</td>
+                <td class="text-nowrap small">
+                    <span class="badge text-bg-warning" th:unless="${c.issued}">발급 전</span>
+                    <th:block th:if="${c.issued}">
+                        <div th:text="${c.issuDt}">발급일</div>
+                        <div class="text-secondary" th:text="|${c.vrfcNo} · ${c.procEmpNm}|">번호</div>
+                    </th:block>
+                </td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-secondary" th:href="@{/certificates/{id}(id=${c.certId})}">보기</a>
+                    <form method="post" class="d-inline" th:if="${withIssue and !c.issued}"
+                          th:action="@{/certificates/{id}/issue(id=${c.certId})}"
+                          th:attr="data-confirm=|${c.trgtEmpNm}의 경력증명서 ${c.certId}번을 발급할까요? 발급 후에는 고칠 수 없습니다.|">
+                        <button type="submit" class="btn btn-sm btn-primary">발급</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

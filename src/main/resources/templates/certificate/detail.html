@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(|경력증명서 ${cert.certId}|)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1">
+        <a th:href="@{/}">홈</a> /
+        <a th:href="@{/certificates}">경력증명서</a>
+    </nav>
+    <h1 class="h3" th:text="|경력증명서 ${cert.certId}번|">경력증명서</h1>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">발급했습니다.</div>
+    <div class="alert alert-warning" th:unless="${cert.issued}">
+        아직 발급 전입니다. 기재 값은 발급할 때 그 시점의 정보로 채워집니다.
+    </div>
+
+    <div class="cert-paper" th:if="${cert.issued}">
+        <div class="text-center mb-4">
+            <div class="h4 fw-bold mb-1">경 력 증 명 서</div>
+            <div class="small text-secondary" th:text="|진위확인번호 ${cert.vrfcNo}|">번호</div>
+        </div>
+        <table class="table table-bordered small mb-4">
+            <tbody>
+            <tr><th class="table-light" style="width: 9rem">성명</th><td th:text="${cert.stmtEmpNm}">이름</td></tr>
+            <tr th:if="${cert.emplPrdStmtYn == 'Y'}"><th class="table-light">재직기간</th><td th:text="${cert.stmtEmplPrd}">기간</td></tr>
+            <tr th:if="${cert.blngStmtYn == 'Y'}"><th class="table-light">소속</th><td th:text="${cert.stmtBlng}">소속</td></tr>
+            <tr><th class="table-light">용도</th><td th:text="${cert.usg != null} ? ${cert.usg} : '-'">용도</td></tr>
+            </tbody>
+        </table>
+        <div class="fw-semibold mb-2" th:unless="${incls.isEmpty()}">프로젝트 수행 경력</div>
+        <table class="table table-bordered small" th:unless="${incls.isEmpty()}">
+            <thead class="table-light">
+            <tr><th>프로젝트명</th><th>발주처</th><th>직무</th><th>투입기간</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="i : ${incls}">
+                <td th:text="${i.prjNm}">프로젝트</td>
+                <td th:text="${i.clientNm}">발주처</td>
+                <td th:text="${i.roleNm}">직무</td>
+                <td th:text="${i.asgnPrd}">기간</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="text-center mt-4">
+            <div th:text="|위와 같이 경력을 증명합니다.|">증명</div>
+            <div class="mt-2" th:text="${cert.issuDt}">발급일</div>
+            <div class="fw-semibold mt-1">SI 주식회사</div>
+            <div class="small text-secondary" th:text="|발급 처리 ${cert.procEmpNm}|">처리</div>
+        </div>
+    </div>
+
+    <th:block th:unless="${cert.issued}">
+        <h2 class="h5">수록할 참여 <span class="text-secondary fs-6" th:text="|${incls.size()}건|">0건</span></h2>
+        <div class="table-responsive" th:unless="${incls.isEmpty()}">
+            <table class="table table-sm align-middle">
+                <thead class="table-light"><tr><th>프로젝트ID</th><th>기재 값</th></tr></thead>
+                <tbody>
+                <tr th:each="i : ${incls}">
+                    <td th:text="${i.prjId}">P26-001</td>
+                    <td class="small text-secondary">발급할 때 채워집니다</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </th:block>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
