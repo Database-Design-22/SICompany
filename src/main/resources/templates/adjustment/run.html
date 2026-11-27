@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('보정 실행')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 경영 현황</nav>
+    <h1 class="h3">보정 실행</h1>
+    <p class="text-secondary">
+        실행일자 기준 최근 N년 동안 제출된 PM·동료 평가로 평가자별 평균과 유형 평균의 차이를 구해 적용보정값을 정합니다.
+        평가 프로젝트가 최소 프로젝트 수보다 적으면 0, 최대 보정폭을 넘으면 그 폭으로 자릅니다. 원점수는 바꾸지 않습니다.
+    </p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">실행했습니다.</div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-play-circle"></i> 새 회차 실행</div>
+                <form method="post" th:action="@{/adjustments/run}" class="card-body row g-2"
+                      data-confirm="이 정책값으로 보정을 실행할까요? 실행일자는 오늘이고, 확정 전까지는 최소 프로젝트 수와 최대 보정폭만 바꿔 다시 계산할 수 있습니다.">
+                    <div class="col-6">
+                        <label class="form-label small" for="adjYr">보정연도</label>
+                        <input class="form-control" id="adjYr" name="adjYr" type="number" th:value="${nextYear}" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="tndcy">성향산정기간 (년)</label>
+                        <input class="form-control" id="tndcy" name="tndcyCalcPrd" type="number" min="1" max="10" value="3" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="minPrj">최소 프로젝트 수</label>
+                        <input class="form-control" id="minPrj" name="minPrjCnt" type="number" min="1" max="20" value="3" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="maxW">최대 보정폭 (±점)</label>
+                        <input class="form-control" id="maxW" name="maxAdjWdth" type="number" min="0.1" max="9.9" step="0.1" value="1.5" required>
+                    </div>
+                    <div class="col-12"><button type="submit" class="btn btn-primary btn-sm">실행</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="table-responsive h-100 mb-0">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr><th>보정연도</th><th>정책값</th><th>실행</th><th>상태</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="r : ${rounds}" th:classappend="${year != null and year == r.adjYr} ? 'table-primary'">
+                        <td class="fw-semibold" th:text="${r.adjYr}">2026</td>
+                        <td class="small text-nowrap" th:text="|최근 ${r.tndcyCalcPrd}년 · 최소 ${r.minPrjCnt}개 · ±${r.maxAdjWdth}점|">정책값</td>
+                        <td class="small text-nowrap" th:text="|${r.execDt} · ${r.execrNm}|">실행</td>
+                        <td>
+                            <span class="badge text-bg-success" th:if="${r.confirmed}">확정</span>
+                            <span class="badge text-bg-warning" th:unless="${r.confirmed}">미확정</span>
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/adjustments/run(year=${r.adjYr})}"
+                               th:text="|보정값 ${r.adjValCnt}건|">보정값</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${selectedRound != null}">
+        <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-2">
+            <h2 class="h5 mb-0" th:text="|${selectedRound.adjYr}년 평가자 성향 (평가자보정값 ${values.size()}건)|">평가자 성향</h2>
+            <form method="post" class="d-flex flex-wrap align-items-end gap-2" th:unless="${selectedRound.confirmed}"
+                  th:action="@{/adjustments/{y}/recalculate(y=${selectedRound.adjYr})}"
+                  th:attr="data-confirm=|${selectedRound.adjYr}년 적용보정값을 다시 계산할까요?|">
+                <div>
+                    <label class="form-label small mb-0" for="rMin">최소 프로젝트 수</label>
+                    <input class="form-control form-control-sm" id="rMin" name="minPrjCnt" type="number" min="1" max="20"
+                           style="width: 7rem" th:value="${selectedRound.minPrjCnt}" required>
+                </div>
+                <div>
+                    <label class="form-label small mb-0" for="rMax">최대 보정폭</label>
+                    <input class="form-control form-control-sm" id="rMax" name="maxAdjWdth" type="number" min="0.1" max="9.9" step="0.1"
+                           style="width: 7rem" th:value="${selectedRound.maxAdjWdth}" required>
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-primary">재계산</button>
+            </form>
+            <span class="small text-secondary" th:if="${selectedRound.confirmed}"
+                  th:text="|${selectedRound.cnfmDt}에 확정되어 다시 계산할 수 없습니다.|">확정됨</span>
+        </div>
+        <p class="small text-secondary">
+            적용보정값이 +이면 후하게, −이면 짜게 준 평가자입니다. 보정점수 = 원점수 − 적용보정값.
+        </p>
+        <div class="alert alert-light border" th:if="${values.isEmpty()}">이 회차의 평가자보정값이 없습니다.</div>
+        <div class="table-responsive" th:unless="${values.isEmpty()}">
+            <table class="table table-sm align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>구분</th><th>평가자</th>
+                    <th class="text-end">평가 건수</th><th class="text-end">평가 프로젝트</th>
+                    <th class="text-end">평가자 평균</th><th class="text-end">적용보정값</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="v : ${values}">
+                    <td><span class="badge" th:classappend="${v.evalDiv == 'PM'} ? 'text-bg-primary' : 'text-bg-info'" th:text="${v.evalDiv}">PM</span></td>
+                    <td class="text-nowrap"><span th:text="${v.evltrNm}">이름</span> <span class="small text-secondary" th:text="${v.evltrEmpId}">ID</span></td>
+                    <td class="text-end" th:text="${v.evalCnt}">0</td>
+                    <td class="text-end" th:text="${v.evalPrjCnt}">0</td>
+                    <td class="text-end" th:text="${v.evltrAvgScore}">0</td>
+                    <td class="text-end fw-semibold"
+                        th:classappend="${v.aplyAdjVal.signum() > 0} ? 'text-danger' : (${v.aplyAdjVal.signum() < 0} ? 'text-primary' : 'text-secondary')"
+                        th:text="${v.aplyAdjVal.signum() > 0} ? |+${v.aplyAdjVal}| : ${v.aplyAdjVal}">0.0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </th:block>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

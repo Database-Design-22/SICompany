@@ -26,7 +26,7 @@ public class PlaceholderController {
             // 인력 관리
             "/certificates/issue",
             // 경영 현황
-            "/dashboard", "/employees", "/adjustments/run", "/incentives",
+            "/dashboard", "/employees", "/incentives",
             // 로그인 전
             "/signup"
     })

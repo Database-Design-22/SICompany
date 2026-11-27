@@ -48,4 +48,9 @@ public final class AdjustmentDtos {
     public record EvaluateeSummary(String evlteEmpId, String evlteEmpNm, int evalCnt,
                                    BigDecimal rawAvg, BigDecimal adjAvg) {
     }
+
+    /** 평가자보정값 한 줄 (평가자 성향) */
+    public record EvltrAdjVal(String evalDiv, String evltrEmpId, String evltrNm, int evalCnt, int evalPrjCnt,
+                              BigDecimal evltrAvgScore, BigDecimal aplyAdjVal) {
+    }
 }

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import com.databasedesign.SiCompany.adjustment.AdjustmentDtos.AdjRound;
 import com.databasedesign.SiCompany.adjustment.AdjustmentDtos.EvalResult;
 import com.databasedesign.SiCompany.adjustment.AdjustmentDtos.EvaluateeSummary;
+import com.databasedesign.SiCompany.adjustment.AdjustmentDtos.EvltrAdjVal;
 
 import lombok.RequiredArgsConstructor;
 
@@ -100,6 +101,106 @@ public class AdjustmentRepository {
               AND CNFM_DT IS NULL
             """;
 
+    /**
+     * 보정 계산 공통 부분 (보정연도 하나를 파라미터로 받는다).
+     * - r      : 그 회차의 정책값 (성향산정기간, 최소프로젝트수, 최대보정폭, 실행일자)
+     * - ev     : 실행일자 기준 최근 N년 안에 제출된 PM·동료 평가와 평가 점수(문항 점수 평균)
+     * - evltr  : 평가자·평가구분별 평가건수, 평가프로젝트수, 평균점수
+     * - div_avg: 평가구분별 전체 평균
+     * 적용보정값 = (평가자 평균 - 유형 평균)을 ±최대보정폭으로 제한, 평가프로젝트수 < 최소프로젝트수면 0
+     */
+    private static final String ADJ_CALC_CTE = """
+            WITH r AS (
+                SELECT ADJ_YR, TNDCY_CALC_PRD, MIN_PRJ_CNT, MAX_ADJ_WDTH, EXEC_DT
+                FROM TB_ADJ_RND
+                WHERE ADJ_YR = ?
+            ),
+            ev AS (
+                SELECT e.EVAL_ID, e.EVAL_DIV, e.PRJ_ID,
+                       COALESCE(pm.EVLTR_EMP_ID, pe.EVLTR_EMP_ID) AS EVLTR_EMP_ID,
+                       AVG(s.SCORE) AS RAW_SCORE
+                FROM r
+                JOIN TB_EVAL e
+                  ON e.EVAL_STAT = '제출'
+                 AND e.EVAL_DIV IN ('PM', '동료')
+                 AND e.EVAL_DT > DATE_SUB(r.EXEC_DT, INTERVAL r.TNDCY_CALC_PRD YEAR)
+                 AND e.EVAL_DT <= r.EXEC_DT
+                JOIN TB_EVAL_QSTN_SCORE s ON s.EVAL_ID = e.EVAL_ID
+                LEFT JOIN TB_PM_EVAL pm   ON pm.EVAL_ID = e.EVAL_ID
+                LEFT JOIN TB_PEER_EVAL pe ON pe.EVAL_ID = e.EVAL_ID
+                GROUP BY e.EVAL_ID, e.EVAL_DIV, e.PRJ_ID, pm.EVLTR_EMP_ID, pe.EVLTR_EMP_ID
+            ),
+            evltr AS (
+                SELECT EVLTR_EMP_ID, EVAL_DIV,
+                       COUNT(*) AS EVAL_CNT,
+                       COUNT(DISTINCT PRJ_ID) AS EVAL_PRJ_CNT,
+                       AVG(RAW_SCORE) AS AVG_SCORE
+                FROM ev
+                GROUP BY EVLTR_EMP_ID, EVAL_DIV
+            ),
+            div_avg AS (
+                SELECT EVAL_DIV, AVG(RAW_SCORE) AS DIV_AVG
+                FROM ev
+                GROUP BY EVAL_DIV
+            )
+            """;
+
+    /** 실행 ①: 보정회차 생성 (실행일자 오늘, 확정 전) */
+    public static final String INSERT_ROUND = """
+            INSERT INTO TB_ADJ_RND (ADJ_YR, TNDCY_CALC_PRD, MIN_PRJ_CNT, MAX_ADJ_WDTH, EXEC_DT, CNFM_DT, EXECR_EMP_ID)
+            VALUES (?, ?, ?, ?, CURDATE(), NULL, ?)
+            """;
+
+    /** 실행 ②: 평가자보정값 계산과 저장 (보정연도 파라미터 1개) */
+    public static final String INSERT_EVLTR_ADJ_VALS = """
+            INSERT INTO TB_EVLTR_ADJ_VAL
+                   (ADJ_YR, EVLTR_EMP_ID, EVAL_DIV, EVAL_CNT, EVAL_PRJ_CNT, EVLTR_AVG_SCORE, APLY_ADJ_VAL)
+            """ + ADJ_CALC_CTE + """
+            SELECT r.ADJ_YR, x.EVLTR_EMP_ID, x.EVAL_DIV, x.EVAL_CNT, x.EVAL_PRJ_CNT,
+                   ROUND(x.AVG_SCORE, 2),
+                   CASE WHEN x.EVAL_PRJ_CNT < r.MIN_PRJ_CNT THEN 0
+                        ELSE LEAST(r.MAX_ADJ_WDTH,
+                                   GREATEST(-r.MAX_ADJ_WDTH, ROUND(x.AVG_SCORE - d.DIV_AVG, 1)))
+                   END
+            FROM evltr x
+            JOIN div_avg d ON d.EVAL_DIV = x.EVAL_DIV
+            CROSS JOIN r
+            """;
+
+    /** 재계산 ①: 정책값 변경 (최소프로젝트수, 최대보정폭만. 확정 전일 때만 바뀐다) */
+    public static final String UPDATE_ROUND_POLICY = """
+            UPDATE TB_ADJ_RND
+            SET MIN_PRJ_CNT = ?, MAX_ADJ_WDTH = ?
+            WHERE ADJ_YR = ? AND CNFM_DT IS NULL
+            """;
+
+    /**
+     * 재계산 ②: 적용보정값만 다시 계산 (보정연도 파라미터 2개).
+     * 성향산정기간과 실행일자는 그대로라 평가자 명단은 바뀌지 않으므로 행을 고치기만 한다.
+     */
+    public static final String UPDATE_EVLTR_ADJ_VALS = ADJ_CALC_CTE + """
+            UPDATE TB_EVLTR_ADJ_VAL v
+            JOIN evltr x   ON x.EVLTR_EMP_ID = v.EVLTR_EMP_ID AND x.EVAL_DIV = v.EVAL_DIV
+            JOIN div_avg d ON d.EVAL_DIV = v.EVAL_DIV
+            JOIN r         ON r.ADJ_YR = v.ADJ_YR
+            SET v.APLY_ADJ_VAL =
+                CASE WHEN x.EVAL_PRJ_CNT < r.MIN_PRJ_CNT THEN 0
+                     ELSE LEAST(r.MAX_ADJ_WDTH,
+                                GREATEST(-r.MAX_ADJ_WDTH, ROUND(x.AVG_SCORE - d.DIV_AVG, 1)))
+                END
+            WHERE v.ADJ_YR = ?
+            """;
+
+    /** 평가자 성향: 그 연도의 평가자보정값 (보정값이 큰 순 = 후하게 준 평가자가 위) */
+    public static final String FIND_EVLTR_ADJ_VALS = """
+            SELECT v.EVAL_DIV, v.EVLTR_EMP_ID, e.EMP_NM, v.EVAL_CNT, v.EVAL_PRJ_CNT,
+                   v.EVLTR_AVG_SCORE, v.APLY_ADJ_VAL
+            FROM TB_EVLTR_ADJ_VAL v
+            JOIN TB_EMP e ON e.EMP_ID = v.EVLTR_EMP_ID
+            WHERE v.ADJ_YR = ?
+            ORDER BY FIELD(v.EVAL_DIV, 'PM', '동료'), v.APLY_ADJ_VAL DESC, e.EMP_NM
+            """;
+
     private final JdbcTemplate jdbcTemplate;
 
     public List<AdjRound> findRounds() {
@@ -144,6 +245,35 @@ public class AdjustmentRepository {
                 rs.getInt("EVAL_CNT"),
                 rs.getBigDecimal("RAW_AVG"),
                 (BigDecimal) rs.getObject("ADJ_AVG")), from, to, evalDiv, evalDiv);
+    }
+
+    public void insertRound(int adjYr, int tndcyCalcPrd, int minPrjCnt, BigDecimal maxAdjWdth, String execrEmpId) {
+        jdbcTemplate.update(INSERT_ROUND, adjYr, tndcyCalcPrd, minPrjCnt, maxAdjWdth, execrEmpId);
+    }
+
+    /** @return 저장한 평가자보정값 수 */
+    public int insertEvltrAdjVals(int adjYr) {
+        return jdbcTemplate.update(INSERT_EVLTR_ADJ_VALS, adjYr);
+    }
+
+    public int updateRoundPolicy(int adjYr, int minPrjCnt, BigDecimal maxAdjWdth) {
+        return jdbcTemplate.update(UPDATE_ROUND_POLICY, minPrjCnt, maxAdjWdth, adjYr);
+    }
+
+    /** @return 고친 평가자보정값 수 (값이 같으면 0으로 셀 수 있다) */
+    public int updateEvltrAdjVals(int adjYr) {
+        return jdbcTemplate.update(UPDATE_EVLTR_ADJ_VALS, adjYr, adjYr);
+    }
+
+    public List<EvltrAdjVal> findEvltrAdjVals(int adjYr) {
+        return jdbcTemplate.query(FIND_EVLTR_ADJ_VALS, (rs, i) -> new EvltrAdjVal(
+                rs.getString("EVAL_DIV"),
+                rs.getString("EVLTR_EMP_ID"),
+                rs.getString("EMP_NM"),
+                rs.getInt("EVAL_CNT"),
+                rs.getInt("EVAL_PRJ_CNT"),
+                rs.getBigDecimal("EVLTR_AVG_SCORE"),
+                rs.getBigDecimal("APLY_ADJ_VAL")), adjYr);
     }
 
     public int confirmRound(int adjYr) {
