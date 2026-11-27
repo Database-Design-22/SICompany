@@ -124,6 +124,22 @@ public class ProjectRepository {
             WHERE PRJ_ID = ? AND PRJ_STAT IN ('진행', '지연')
             """;
 
+    /** 지연 처리 (매일 배치를 버튼으로 실행): 진행 중인데 예정종료일자가 지난 프로젝트를 '지연'으로 */
+    public static final String MARK_DELAYED = """
+            UPDATE TB_PRJ
+            SET PRJ_STAT = '지연'
+            WHERE PRJ_STAT = '진행'
+              AND SCHD_END_DT < CURDATE()
+            """;
+
+    /** 지연 처리 대상 수 */
+    public static final String COUNT_DELAY_TARGETS = """
+            SELECT COUNT(*)
+            FROM TB_PRJ
+            WHERE PRJ_STAT = '진행'
+              AND SCHD_END_DT < CURDATE()
+            """;
+
     /** 정정·철수 ①: 투입 이력 한 건 (직무, 프로젝트 상태, 교체 요청과 걸린 수) */
     public static final String FIND_HIST = """
             SELECT h.PRJ_HIST_ID, h.EMP_ID, e.EMP_NM, h.PRJ_ID, pt.ROLE_ID,
@@ -405,6 +421,15 @@ public class ProjectRepository {
     /** @return 삭제한 메모 수 */
     public int deleteProjectMemos(String prjId) {
         return jdbcTemplate.update(DELETE_PROJECT_MEMOS, prjId);
+    }
+
+    public int markDelayed() {
+        return jdbcTemplate.update(MARK_DELAYED);
+    }
+
+    public int countDelayTargets() {
+        Integer count = jdbcTemplate.queryForObject(COUNT_DELAY_TARGETS, Integer.class);
+        return count == null ? 0 : count;
     }
 
     private static ProjectRow toProjectRow(ResultSet rs) throws SQLException {

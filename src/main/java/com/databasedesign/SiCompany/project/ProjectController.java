@@ -35,8 +35,11 @@ public class ProjectController {
         model.addAttribute("stat", prjStat == null ? "" : prjStat);
         model.addAttribute("projects", projectService.findProjects(prjStat));
         model.addAttribute("managers", projectService.findClientManagers());
+        model.addAttribute("delayTargetCnt", projectService.countDelayTargets());
         model.addAttribute("executedSqls", List.of(
                 new ExecutedSql("프로젝트 목록 (PM, 팀원 수, 열린 투입 수)", ProjectRepository.FIND_PROJECTS),
+                new ExecutedSql("지연 처리 대상 수", ProjectRepository.COUNT_DELAY_TARGETS),
+                new ExecutedSql("지연 처리 (예정종료일자가 지난 진행 프로젝트)", ProjectRepository.MARK_DELAYED),
                 new ExecutedSql("등록 ①: 발주처 담당자 목록", ProjectRepository.FIND_CLIENT_MANAGERS),
                 new ExecutedSql("등록 ②: 다음 프로젝트ID 일련번호 (잠금)", ProjectRepository.NEXT_PRJ_SEQ),
                 new ExecutedSql("등록 ③: 프로젝트 생성", ProjectRepository.INSERT_PROJECT)));
@@ -54,6 +57,14 @@ public class ProjectController {
         redirect.addFlashAttribute("notice", "프로젝트 " + prjId + "을(를) '진행' 상태로 등록했습니다."
                 + " 인력 배정 메뉴에서 PM과 팀원을 배정하세요.");
         return "redirect:/projects/" + prjId;
+    }
+
+    @PostMapping("/projects/delay")
+    public String markDelayed(CurrentUser user, RedirectAttributes redirect) {
+        user.require(CurrentUser.MGT);
+        int count = projectService.markDelayed();
+        redirect.addFlashAttribute("notice", "예정종료일자가 지난 진행 프로젝트 " + count + "건을 '지연'으로 바꿨습니다.");
+        return "redirect:/projects";
     }
 
     @PostMapping("/projects/{prjId}/edit")

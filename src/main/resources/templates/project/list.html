@@ -39,7 +39,10 @@
         </form>
     </details>
 
-    <form method="get" th:action="@{/projects}" class="d-flex gap-2 align-items-center mb-3">
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">처리했습니다.</div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <form method="get" th:action="@{/projects}" class="d-flex gap-2 align-items-center me-auto">
         <label for="stat" class="small text-secondary">상태</label>
         <select id="stat" name="stat" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
             <option value="" th:selected="${stat == ''}">전체</option>
@@ -47,6 +50,12 @@
         </select>
         <span class="small text-secondary" th:text="|${projects.size()}건|">0건</span>
     </form>
+    <form method="post" th:action="@{/projects/delay}" class="d-flex align-items-center gap-2"
+          th:attr="data-confirm=|예정종료일자가 지난 진행 프로젝트 ${delayTargetCnt}건을 '지연'으로 바꿀까요? (원래 매일 도는 배치입니다)|">
+        <span class="small text-secondary" th:text="|지연 처리 대상 ${delayTargetCnt}건|">대상</span>
+        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock-history"></i> 지연 처리 실행</button>
+    </form>
+    </div>
 
     <div class="alert alert-light border" th:if="${projects.isEmpty()}">프로젝트가 없습니다.</div>
 

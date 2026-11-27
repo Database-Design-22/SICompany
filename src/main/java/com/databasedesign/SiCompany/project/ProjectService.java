@@ -111,6 +111,16 @@ public class ProjectService {
         }
     }
 
+    public int countDelayTargets() {
+        return projectRepository.countDelayTargets();
+    }
+
+    /** 지연 처리: 진행 중인데 예정종료일자가 지난 프로젝트를 '지연'으로 바꾼다. @return 바꾼 수 */
+    @Transactional
+    public int markDelayed() {
+        return projectRepository.markDelayed();
+    }
+
     public List<WithdrawReason> findWithdrawReasons() {
         return projectRepository.findWithdrawReasons();
     }
