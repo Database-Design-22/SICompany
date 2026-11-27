@@ -130,7 +130,10 @@ public class DesignationRepository {
                     WHERE hs.EMP_ID = d.EMP_ID) AS SKILLS,
                    ds.DESIG_ID, ds.DESIG_DIV, ds.DESIG_DT, ds.DESIG_RSN,
                    ds.REPL_REQ_ID, rq.REQ_DT, rq.REQ_RSN, mg.MGR_NM AS REQ_MGR_NM,
-                   pt.ROLE_ID AS PTCP_ROLE_ID
+                   pt.ROLE_ID AS PTCP_ROLE_ID,
+                   (SELECT MAX(h.END_DT)
+                    FROM TB_PRJ_HIST h
+                    WHERE h.EMP_ID = d.EMP_ID) AS LAST_END_DT
             FROM TB_DEV_EMP d
             JOIN TB_EMP e ON e.EMP_ID = d.EMP_ID
             LEFT JOIN TB_SKILL_GRD g ON g.GRD_ID = d.GRD_ID
@@ -222,7 +225,8 @@ public class DesignationRepository {
                 rs.getObject("REQ_DT", LocalDate.class),
                 rs.getString("REQ_RSN"),
                 rs.getString("REQ_MGR_NM"),
-                rs.getString("PTCP_ROLE_ID")), prjId);
+                rs.getString("PTCP_ROLE_ID"),
+                rs.getObject("LAST_END_DT", LocalDate.class)), prjId);
     }
 
     public List<Role> findRoles() {

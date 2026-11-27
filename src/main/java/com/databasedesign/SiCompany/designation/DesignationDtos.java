@@ -44,7 +44,15 @@ public final class DesignationDtos {
     public record Candidate(String empId, String empNm, String grdNm, String skills,
                             Integer desigId, String desigDiv, LocalDate desigDt, String desigRsn,
                             Integer replReqId, LocalDate reqDt, String reqRsn, String reqMgrNm,
-                            String ptcpRoleId) {
+                            String ptcpRoleId, LocalDate lastEndDt) {
+        /** 기본 투입 시작일: 기준일과 마지막 투입 종료일 다음 날 중 늦은 날 (이전 투입과 겹치지 않게) */
+        public LocalDate earliestStart(LocalDate base) {
+            if (lastEndDt == null || lastEndDt.isBefore(base)) {
+                return base;
+            }
+            return lastEndDt.plusDays(1);
+        }
+
         public boolean isNominated() {
             return "지명".equals(desigDiv);
         }

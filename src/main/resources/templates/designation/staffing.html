@@ -94,7 +94,8 @@
                             </select>
                             <input type="date" name="strtDt" class="form-control form-control-sm w-auto" required
                                    aria-label="투입 시작일"
-                                   th:value="${defaultStrtDt}" th:min="${project.strtDt}">
+                                   th:value="${c.earliestStart(defaultStrtDt)}" th:min="${project.strtDt}"
+                                   th:title="${c.lastEndDt != null} ? |마지막 투입 종료 ${c.lastEndDt}| : '투입 이력 없음'">
                             <button type="submit" class="btn btn-sm"
                                     th:classappend="${c.excluded} ? 'btn-outline-danger' : 'btn-primary'">배정</button>
                         </form>
