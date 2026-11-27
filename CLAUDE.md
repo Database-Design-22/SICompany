@@ -1,7 +1,7 @@
 # si-company 데모 앱
 
 SI 회사의 프로젝트 인력 배치와 평가를 관리하는 DB 설계 수업 팀 프로젝트다.
-화면은 실제 사내 업무 시스템처럼 권한별 메뉴로 구성한다. **먼저 데모 시나리오 2개에 쓰는 기능을 만들고**, 그다음에 나머지 기능(고도화)을 하나씩 넓혀 간다. 아직 만들지 않은 메뉴는 "준비 중" 화면으로 둔다.
+화면은 실제 사내 업무 시스템처럼 권한별 메뉴로 구성한다. **먼저 데모 시나리오 2개에 쓰는 기능을 만들고**, 그다음에 나머지 기능(고도화)을 하나씩 넓혀 간다. 지금은 모든 메뉴를 만들었다. 새 메뉴를 먼저 "준비 중"으로 두려면 이름이 `PlaceholderController`인 컨트롤러에 그 주소를 매핑한다 (`common/MenuStatus.java`가 메뉴에 표시한다).
 **DB 설계 프로젝트이지 웹 프로젝트가 아니다.** 화면 디자인은 평가하지 않으니 꾸미는 데 시간을 쓰지 않는다. 잘 돌아가고 어떤 SQL이 실행됐는지 보이는 것이 중요하다.
 
 ## 기술 스택과 규칙
@@ -30,11 +30,11 @@ SI 회사의 프로젝트 인력 배치와 평가를 관리하는 DB 설계 수�
 | --- | --- |
 | 공통 (모든 직원) | 내 정보 `/me`, 경력증명서 신청 `/certificates` |
 | 내 업무 (개발직원, EMP_DIV='개발') | 내 프로젝트 `/my/projects`, 평가메모 `/memos` ★, 내 평가 `/evaluations` ★, 고객평가 입력 `/evaluations/customer` |
-| 인력 관리 (경영관리팀 MGT) | 교체 요청 `/replacements` ★, 발주처 지정인력 `/designations` ★, 인력 배정 `/staffing` ★, 프로젝트 관리 `/projects`, 경력증명서 발급 `/certificates/issue` |
+| 인력 관리 (경영관리팀 MGT) | 교체 요청 `/replacements` ★, 발주처 지정인력 `/designations` ★, 인력 배정 `/staffing` ★, 프로젝트 관리 `/projects`, 합격자 명부 `/passers`, 경력증명서 발급 `/certificates/issue` |
 | 경영 현황 (경영진 EXE) | 평가 결과·보정 `/adjustments` ★, 프로젝트 현황 `/dashboard`, 직원 검색 `/employees`, 보정 실행 `/adjustments/run`, 인센티브 자료 `/incentives` |
 | 로그인 전 | 회원가입 `/signup` |
 
-★는 데모 시나리오에 쓰는 메뉴로 먼저 만든다. 기능을 만들면 `PlaceholderController`의 주소 목록에서 그 주소를 지운다.
+★는 데모 시나리오에 쓰는 메뉴다. 메뉴에 없는 화면: 특정 시점 참여 조회 `/employees/as-of`(경영진), 경력증명서 보기 `/certificates/{id}`.
 
 ## 패키지 구조 (기본 패키지 아래)
 
@@ -45,6 +45,11 @@ evaluation/    평가 작성과 제출 (시나리오 1)
 adjustment/    점수 보정 조회와 확정 (시나리오 1)
 replacement/   교체 요청과 처리 (시나리오 2)
 designation/   발주처 지정인력과 배정 후보 (시나리오 2)
+project/       프로젝트 등록·수정·종료·중단, 투입 기간 정정·철수
+dashboard/     프로젝트 현황, 인센티브 기초자료 (조회만)
+employee/      직원 검색, 특정 시점 참여 조회, 내 정보
+certificate/   경력증명서 신청·발급
+signup/        합격자 명부, 회원가입
 ```
 기능 폴더마다 Controller, Service, Repository, DTO를 둔다.
 
