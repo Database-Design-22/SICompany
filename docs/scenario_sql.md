@@ -507,7 +507,13 @@ LEFT JOIN TB_PEER_EVAL pe ON pe.EVAL_ID = e.EVAL_ID
 JOIN TB_PRJ p ON p.PRJ_ID = e.PRJ_ID
 JOIN TB_EMP t ON t.EMP_ID = e.EVLTE_EMP_ID
 WHERE e.EVAL_ID = ?
-  AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?)
+  AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?
+       OR (e.EVAL_DIV = '고객'
+           AND EXISTS (SELECT 1
+                       FROM TB_PRJ_PTCP x
+                       WHERE x.PRJ_ID = e.PRJ_ID
+                         AND x.EMP_ID = ?
+                         AND x.ROLE_ID = 'PM')))
 ```
 
 2. 평가구분에 맞는 문항과 입력한 점수 — `EvaluationRepository.FIND_QUESTIONS`
@@ -518,6 +524,7 @@ FROM TB_EVAL e
 JOIN TB_EVAL_QSTN q
   ON (e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
   OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+  OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y')
 LEFT JOIN TB_EVAL_QSTN_SCORE s ON s.EVAL_ID = e.EVAL_ID AND s.QSTN_ID = q.QSTN_ID
 WHERE e.EVAL_ID = ?
 ORDER BY q.EVAL_ITEM_ID DESC, q.QSTN_ID
@@ -558,7 +565,13 @@ LEFT JOIN TB_PEER_EVAL pe ON pe.EVAL_ID = e.EVAL_ID
 JOIN TB_PRJ p ON p.PRJ_ID = e.PRJ_ID
 JOIN TB_EMP t ON t.EMP_ID = e.EVLTE_EMP_ID
 WHERE e.EVAL_ID = ?
-  AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?)
+  AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?
+       OR (e.EVAL_DIV = '고객'
+           AND EXISTS (SELECT 1
+                       FROM TB_PRJ_PTCP x
+                       WHERE x.PRJ_ID = e.PRJ_ID
+                         AND x.EMP_ID = ?
+                         AND x.ROLE_ID = 'PM')))
 ```
 
 2. 받을 수 있는 문항 — `EvaluationRepository.FIND_QUESTIONS`
@@ -569,6 +582,7 @@ FROM TB_EVAL e
 JOIN TB_EVAL_QSTN q
   ON (e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
   OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+  OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y')
 LEFT JOIN TB_EVAL_QSTN_SCORE s ON s.EVAL_ID = e.EVAL_ID AND s.QSTN_ID = q.QSTN_ID
 WHERE e.EVAL_ID = ?
 ORDER BY q.EVAL_ITEM_ID DESC, q.QSTN_ID
@@ -624,7 +638,13 @@ LEFT JOIN TB_PEER_EVAL pe ON pe.EVAL_ID = e.EVAL_ID
 JOIN TB_PRJ p ON p.PRJ_ID = e.PRJ_ID
 JOIN TB_EMP t ON t.EMP_ID = e.EVLTE_EMP_ID
 WHERE e.EVAL_ID = ?
-  AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?)
+  AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?
+       OR (e.EVAL_DIV = '고객'
+           AND EXISTS (SELECT 1
+                       FROM TB_PRJ_PTCP x
+                       WHERE x.PRJ_ID = e.PRJ_ID
+                         AND x.EMP_ID = ?
+                         AND x.ROLE_ID = 'PM')))
 ```
 
 2. ① 화면 입력 저장: 문항 — `EvaluationRepository.FIND_QUESTIONS`
@@ -635,6 +655,7 @@ FROM TB_EVAL e
 JOIN TB_EVAL_QSTN q
   ON (e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
   OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+  OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y')
 LEFT JOIN TB_EVAL_QSTN_SCORE s ON s.EVAL_ID = e.EVAL_ID AND s.QSTN_ID = q.QSTN_ID
 WHERE e.EVAL_ID = ?
 ORDER BY q.EVAL_ITEM_ID DESC, q.QSTN_ID
@@ -682,13 +703,15 @@ SELECT
   (SELECT COUNT(*)
    FROM TB_EVAL_QSTN q
    WHERE (e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
-      OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')) AS QSTN_CNT,
+      OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+      OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y')) AS QSTN_CNT,
   (SELECT COUNT(*)
    FROM TB_EVAL_QSTN_SCORE s
    JOIN TB_EVAL_QSTN q ON q.QSTN_ID = s.QSTN_ID
    WHERE s.EVAL_ID = e.EVAL_ID
      AND ((e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
-       OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y'))) AS SCORE_CNT,
+       OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+       OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y'))) AS SCORE_CNT,
   (SELECT COUNT(*) FROM TB_EVAL_ITEM) AS ITEM_CNT,
   (SELECT COUNT(*)
    FROM TB_EVAL_CN c
@@ -1576,3 +1599,13 @@ VALUES (?, ?, ?)
 
 - 여러 테이블을 함께 바꾸는 버튼은 **평가 [제출]**(4개 테이블), **교체 요청 [수용]**(3개 테이블), **인력 배정 [배정]**(2개 테이블)이다.
 - 교체 요청 [수용]의 롤백은 `src/test/.../replacement/ReplacementRollbackTest`가 확인한다. ④ 후임 이력 생성에서 일부러 예외를 내면 이미 실행한 ①(요청 상태)과 ②(대상 이력 종료)까지 되돌아간다.
+
+## 부록: 이 문서에 나오지 않은 SQL 상수
+
+- `AdjustmentRepository.ADJ_CALC_CTE`
+- `AdjustmentRepository.FIND_EVLTR_ADJ_VALS`
+- `AdjustmentRepository.INSERT_EVLTR_ADJ_VALS`
+- `AdjustmentRepository.INSERT_ROUND`
+- `AdjustmentRepository.UPDATE_EVLTR_ADJ_VALS`
+- `AdjustmentRepository.UPDATE_ROUND_POLICY`
+- `EvaluationRepository.FIND_CUST_INFO`

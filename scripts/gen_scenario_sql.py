@@ -40,7 +40,7 @@ def dedent_text_block(raw: str) -> str:
 def parse_constants(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     consts = {}
-    for m in re.finditer(r"public static final String (\w+) =(.*?);\n", text, re.S):
+    for m in re.finditer(r"(?:public|private) static final String (\w+) =(.*?);\n", text, re.S):
         name, expr = m.group(1), m.group(2)
         parts = re.findall(r'"""\n(.*?)"""|(\b[A-Z_]{3,}\b)', expr, re.S)
         value = ""
