@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('내 정보')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 공통</nav>
+    <h1 class="h3">내 정보</h1>
+    <p class="text-secondary">내 인적 사항과 보유 기술, 경력을 확인하고 연락처와 비밀번호를 고칩니다. 주민등록번호는 화면에 보여 주지 않습니다.</p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">고쳤습니다.</div>
+
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="card mb-3">
+                <div class="card-header">인적 사항</div>
+                <div class="card-body small">
+                    <div class="mb-1"><span class="text-secondary">이름</span> <span th:text="|${emp.empNm} (${emp.engNm != null ? emp.engNm : '-'})|"></span></div>
+                    <div class="mb-1"><span class="text-secondary">직원ID · 로그인ID</span> <span th:text="|${emp.empId} · ${emp.loginId}|"></span></div>
+                    <div class="mb-1"><span class="text-secondary">구분</span>
+                        <span th:text="|${emp.empDiv}직원 · ${emp.isDev() ? (emp.grdNm != null ? emp.grdNm : '등급 없음') : emp.deptNm} · ${emp.authNm}|"></span></div>
+                    <div class="mb-1"><span class="text-secondary">입사</span> <span th:text="|${emp.hireDt} · ${emp.years}년차|"></span></div>
+                    <div><span class="text-secondary">최종학력</span> <span th:text="${emp.lastEdu}"></span></div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">연락처</div>
+                <form method="post" th:action="@{/me/contact}" class="card-body row g-2">
+                    <div class="col-12">
+                        <label class="form-label small" for="telno">전화번호</label>
+                        <input class="form-control form-control-sm" id="telno" name="telno" th:value="${emp.telno}" placeholder="010-1234-5678">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small" for="addr">주소</label>
+                        <input class="form-control form-control-sm" id="addr" name="addr" maxlength="200" th:value="${emp.addr}">
+                    </div>
+                    <div class="col-12"><button type="submit" class="btn btn-outline-primary btn-sm">저장</button></div>
+                </form>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">비밀번호 바꾸기</div>
+                <form method="post" th:action="@{/me/password}" class="card-body row g-2">
+                    <div class="col-6">
+                        <label class="form-label small" for="pw">새 비밀번호</label>
+                        <input class="form-control form-control-sm" id="pw" name="password" type="password" minlength="8" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="pw2">확인</label>
+                        <input class="form-control form-control-sm" id="pw2" name="confirm" type="password" minlength="8" required>
+                    </div>
+                    <div class="col-12 small text-secondary">8자 이상. DB에는 해시로만 저장합니다.</div>
+                    <div class="col-12"><button type="submit" class="btn btn-outline-primary btn-sm">바꾸기</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card mb-3" th:if="${emp.isDev()}">
+                <div class="card-header">보유기술 <span class="text-secondary" th:text="|${skills.size()}개|"></span></div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        <form method="post" class="m-0" th:each="s : ${skills}"
+                              th:action="@{/me/skills/{id}/delete(id=${s.skillId})}"
+                              th:attr="data-confirm=|보유기술에서 ${s.skillNm}을(를) 뺄까요?|">
+                            <button type="submit" class="badge text-bg-light border" style="cursor: pointer"
+                                    th:title="|${s.skillNm} 빼기|">
+                                <span th:text="${s.skillNm}">Java</span> <i class="bi bi-x"></i>
+                            </button>
+                        </form>
+                        <span class="small text-secondary" th:if="${skills.isEmpty()}">등록한 기술이 없습니다.</span>
+                    </div>
+                    <form method="post" th:action="@{/me/skills}" class="d-flex gap-2">
+                        <select name="skillId" class="form-select form-select-sm w-auto" required>
+                            <option value="">-- 추가할 기술 --</option>
+                            <option th:each="s : ${allSkills}" th:value="${s.skillId}" th:text="${s.skillNm}">Java</option>
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary btn-sm">추가</button>
+                    </form>
+                </div>
+            </div>
+
+            <h2 class="h5" th:if="${emp.isDev()}">내 경력 <span class="text-secondary fs-6" th:text="|${career.size()}건|">0건</span></h2>
+            <div class="alert alert-light border" th:if="${emp.isDev() and career.isEmpty()}">투입 이력이 없습니다.</div>
+            <div class="table-responsive" th:if="${emp.isDev() and !career.isEmpty()}">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr><th>프로젝트</th><th>직무</th><th>투입 기간</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="c : ${career}" th:classappend="${c.endDt == null} ? 'table-primary'">
+                        <td>
+                            <div th:text="${c.prjNm}">프로젝트</div>
+                            <div class="small text-secondary" th:text="|${c.prjId} · ${c.clientNm}|">ID</div>
+                        </td>
+                        <td class="text-nowrap" th:text="${c.roleNm}">PM</td>
+                        <td class="text-nowrap small" th:text="|${c.strtDt} ~ ${c.endDt != null ? c.endDt : '투입 중'}|">기간</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

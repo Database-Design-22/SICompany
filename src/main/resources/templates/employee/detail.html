@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${emp.empNm})}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / <a th:href="@{/employees}">직원 검색</a></nav>
+
+    <div class="page-hero d-flex flex-wrap align-items-center gap-3">
+        <span class="avatar" style="width:52px;height:52px;font-size:1.25rem"
+              th:text="${emp.empNm != null} ? ${#strings.substring(emp.empNm, 0, 1)} : '?'">김</span>
+        <div class="me-auto">
+            <h1 class="h3 mb-1">
+                <span th:text="${emp.empNm}">이름</span>
+                <span class="fs-6 text-secondary" th:text="${emp.engNm}">영문</span>
+            </h1>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="role-chip" th:text="${emp.empId}">ID</span>
+                <span class="role-chip" th:text="|${emp.empDiv}직원 · ${emp.isDev() ? (emp.grdNm != null ? emp.grdNm : '등급 없음') : emp.deptNm}|">구분</span>
+                <span class="role-chip" th:text="${emp.authNm}">권한</span>
+                <span class="role-chip" th:text="|입사 ${emp.hireDt} · ${emp.years}년차|">입사</span>
+                <span class="role-chip" th:text="${emp.emplStat}">재직</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">기본 정보</div>
+                <div class="card-body small">
+                    <div class="mb-1"><span class="text-secondary">로그인ID</span> <span th:text="${emp.loginId}"></span></div>
+                    <div class="mb-1"><span class="text-secondary">최종학력</span> <span th:text="${emp.lastEdu}"></span></div>
+                    <div class="mb-1"><span class="text-secondary">전화번호</span> <span th:text="${emp.telno != null ? emp.telno : '-'}"></span></div>
+                    <div><span class="text-secondary">주소</span> <span th:text="${emp.addr != null ? emp.addr : '-'}"></span></div>
+                </div>
+            </div>
+            <div class="card" th:if="${emp.isDev()}">
+                <div class="card-header">보유기술 <span class="text-secondary" th:text="|${skills.size()}개|"></span></div>
+                <div class="card-body d-flex flex-wrap gap-1">
+                    <span class="badge text-bg-light border" th:each="s : ${skills}" th:text="${s.skillNm}">Java</span>
+                    <span class="small text-secondary" th:if="${skills.isEmpty()}">등록한 기술이 없습니다.</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <h2 class="h5">투입 이력 <span class="text-secondary fs-6" th:text="|${career.size()}건|">0건</span></h2>
+            <div class="alert alert-light border" th:if="${career.isEmpty()}">투입 이력이 없습니다.</div>
+            <div class="table-responsive" th:unless="${career.isEmpty()}">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr><th>프로젝트</th><th>직무</th><th>투입 기간</th><th>철수사유</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="c : ${career}" th:classappend="${c.endDt == null} ? 'table-primary'">
+                        <td>
+                            <div th:text="${c.prjNm}">프로젝트</div>
+                            <div class="small text-secondary" th:text="|${c.prjId} · ${c.clientNm}|">ID</div>
+                        </td>
+                        <td class="text-nowrap" th:text="${c.roleNm}">PM</td>
+                        <td class="text-nowrap small" th:text="|${c.strtDt} ~ ${c.endDt != null ? c.endDt : '투입 중'}|">기간</td>
+                        <td class="text-nowrap small" th:text="${c.wthdrRsnNm != null} ? ${c.wthdrRsnNm} : '-'">-</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

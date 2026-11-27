@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('직원 검색')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 경영 현황</nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">직원 검색</h1>
+        <a class="btn btn-outline-primary btn-sm" th:href="@{/employees/as-of}"><i class="bi bi-calendar-event"></i> 특정 시점 참여 조회</a>
+    </div>
+    <p class="text-secondary mt-2">직원의 정보, 연차, 보유기술, 지금 투입 중인 프로젝트를 찾습니다. 이름을 누르면 투입 이력을 봅니다. 주민등록번호는 보여 주지 않습니다.</p>
+
+    <form method="get" th:action="@{/employees}" class="card card-body mb-3 row g-2 flex-row">
+        <div class="col-md-3">
+            <label class="form-label small" for="q">이름 또는 직원ID</label>
+            <input class="form-control form-control-sm" id="q" name="q" th:value="${cond.keyword}" placeholder="김다니엘, 11-0007">
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small" for="div">직원구분</label>
+            <select class="form-select form-select-sm" id="div" name="div">
+                <option value="">전체</option>
+                <option th:each="d : ${ {'개발','비개발'} }" th:value="${d}" th:text="${d}" th:selected="${d == cond.empDiv}">개발</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small" for="grd">기술등급</label>
+            <select class="form-select form-select-sm" id="grd" name="grd">
+                <option value="">전체</option>
+                <option th:each="g : ${grades}" th:value="${g.grdId}" th:text="${g.grdNm}" th:selected="${g.grdId == cond.grdId}">고급</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small" for="skill">보유기술</label>
+            <select class="form-select form-select-sm" id="skill" name="skill">
+                <option value="">전체</option>
+                <option th:each="s : ${skills}" th:value="${s.skillId}" th:text="${s.skillNm}" th:selected="${s.skillId == cond.skillId}">Java</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small" for="stat">재직상태</label>
+            <select class="form-select form-select-sm" id="stat" name="stat">
+                <option value="">전체</option>
+                <option th:each="s : ${ {'재직','퇴사'} }" th:value="${s}" th:text="${s}" th:selected="${s == cond.emplStat}">재직</option>
+            </select>
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100">검색</button>
+        </div>
+    </form>
+
+    <div class="small text-secondary mb-2" th:text="|${rows.size()}명|">0명</div>
+    <div class="alert alert-light border" th:if="${rows.isEmpty()}">조건에 맞는 직원이 없습니다.</div>
+    <div class="table-responsive" th:unless="${rows.isEmpty()}">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>직원</th>
+                <th>구분 · 소속</th>
+                <th>권한</th>
+                <th class="text-end">연차</th>
+                <th style="min-width: 14rem">보유기술</th>
+                <th>지금 투입</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${rows}">
+                <td class="text-nowrap">
+                    <a class="fw-semibold" th:href="@{/employees/{id}(id=${r.empId})}" th:text="${r.empNm}">이름</a>
+                    <div class="small text-secondary" th:text="|${r.empId} · ${r.emplStat}|">ID</div>
+                </td>
+                <td class="text-nowrap">
+                    <div th:text="${r.empDiv}">개발</div>
+                    <div class="small text-secondary" th:text="${r.empDiv == '개발'} ? (${r.grdNm != null} ? ${r.grdNm} : '등급 없음') : ${r.deptNm}">등급</div>
+                </td>
+                <td class="text-nowrap" th:text="${r.authNm}">일반직원</td>
+                <td class="text-end text-nowrap" th:text="|${r.years}년차|">1년차</td>
+                <td class="small" th:text="${r.skills != null} ? ${r.skills} : '-'">Java</td>
+                <td class="text-nowrap">
+                    <span class="badge text-bg-primary" th:if="${r.curPrjIds != null}" th:text="${r.curPrjIds}">P26-001</span>
+                    <span class="small text-secondary" th:if="${r.curPrjIds == null and r.empDiv == '개발'}">대기</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
