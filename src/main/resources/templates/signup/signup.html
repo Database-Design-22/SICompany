@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('회원가입')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 로그인 전</nav>
+    <h1 class="h3">회원가입</h1>
+    <p class="text-secondary">
+        합격자 명부와 이름·주민등록번호·직군을 대조해 가입합니다. 직원ID는 입사연도와 일련번호로 자동으로 붙고, 권한은 일반직원입니다.
+        주민등록번호와 비밀번호는 해시로만 저장합니다.
+    </p>
+
+    <form method="post" th:action="@{/signup}" class="card" style="max-width: 860px"
+          data-confirm="이 내용으로 가입할까요?">
+        <div class="card-body row g-3">
+            <div class="col-md-4">
+                <label class="form-label small" for="empNm">이름</label>
+                <input class="form-control" id="empNm" name="empNm" maxlength="50" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small" for="engNm">영문이름</label>
+                <input class="form-control" id="engNm" name="engNm" maxlength="100" placeholder="Gil-dong Hong">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small" for="rrn">주민등록번호</label>
+                <input class="form-control" id="rrn" name="rrn" placeholder="900101-1234567" autocomplete="off" required>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small" for="empDiv">직군</label>
+                <select class="form-select" id="empDiv" name="empDiv" required>
+                    <option value="개발">개발</option>
+                    <option value="비개발">비개발</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small" for="hireDt">입사일자</label>
+                <input class="form-control" id="hireDt" name="hireDt" type="date" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small" for="lastEdu">최종학력</label>
+                <select class="form-select" id="lastEdu" name="lastEdu" required>
+                    <option value="">-- 고르세요 --</option>
+                    <option th:each="e : ${educations}" th:value="${e}" th:text="${e}">학사</option>
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small" for="loginId">로그인ID</label>
+                <div class="input-group">
+                    <input class="form-control" id="loginId" name="loginId" maxlength="30" placeholder="hong.gildong" required>
+                    <button class="btn btn-outline-secondary" type="button" id="check-login">중복 확인</button>
+                </div>
+                <div class="small mt-1" id="login-result"></div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small" for="password">비밀번호 (8자 이상)</label>
+                <input class="form-control" id="password" name="password" type="password" minlength="8" required>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small" for="telno">전화번호</label>
+                <input class="form-control" id="telno" name="telno" placeholder="010-1234-5678">
+            </div>
+            <div class="col-md-8">
+                <label class="form-label small" for="addr">주소</label>
+                <input class="form-control" id="addr" name="addr" maxlength="200">
+            </div>
+
+            <div class="col-12" id="skill-box">
+                <div class="form-label small">경험한 기술 (개발직원만)</div>
+                <div class="d-flex flex-wrap gap-2">
+                    <label class="role-chip" th:each="s : ${skills}">
+                        <input class="form-check-input m-0" type="checkbox" name="skillIds" th:value="${s.skillId}">
+                        <span th:text="${s.skillNm}">Java</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-12"><button type="submit" class="btn btn-primary">가입</button></div>
+        </div>
+    </form>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    // 로그인ID 중복 확인 (안내용. 가입할 때 서버에서 다시 확인한다)
+    document.getElementById('check-login').addEventListener('click', async () => {
+        const id = document.getElementById('loginId').value;
+        const res = await fetch('/signup/check-login?loginId=' + encodeURIComponent(id));
+        const text = await res.text();
+        const box = document.getElementById('login-result');
+        box.textContent = text.substring(3);
+        box.className = 'small mt-1 ' + (text.startsWith('OK') ? 'text-success' : 'text-danger');
+    });
+    // 비개발 직군이면 기술 입력을 숨긴다
+    const div = document.getElementById('empDiv');
+    const skillBox = document.getElementById('skill-box');
+    const toggle = () => {
+        const dev = div.value === '개발';
+        skillBox.style.display = dev ? '' : 'none';
+        if (!dev) skillBox.querySelectorAll('input').forEach((c) => { c.checked = false; });
+    };
+    div.addEventListener('change', toggle);
+    toggle();
+</script>
+</body>
+</html>

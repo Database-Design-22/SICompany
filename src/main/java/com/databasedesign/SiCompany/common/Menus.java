@@ -6,7 +6,6 @@ import java.util.Optional;
 /**
  * 헤더 메뉴와 홈 화면 카드의 정의.
  * 메뉴 그룹마다 볼 수 있는 사람(대상)이 정해져 있고, 현재 사용자에게 맞는 그룹만 보여 준다.
- * 기능을 만들면 PlaceholderController에서 그 주소를 지우고 기능 폴더의 컨트롤러가 맡는다.
  */
 public final class Menus {
 
@@ -71,6 +70,7 @@ public final class Menus {
                     new MenuItem("발주처 지정인력", "/designations", "발주처별 지명·제외 인력을 등록하고 해제한다.", "bi-person-check"),
                     new MenuItem("인력 배정", "/staffing", "프로젝트를 골라 배정 후보를 보고 직원을 투입한다.", "bi-people"),
                     new MenuItem("프로젝트 관리", "/projects", "프로젝트를 등록하고 투입·철수, 종료·중단을 처리한다.", "bi-folder2-open"),
+                    new MenuItem("합격자 명부", "/passers", "회원가입에 쓰는 합격자를 등록하고, 가입하지 않은 합격자를 지운다.", "bi-person-lines-fill"),
                     new MenuItem("경력증명서 발급", "/certificates/issue", "신청된 경력증명서를 확인하고 발급한다.", "bi-patch-check"))),
             new MenuGroup("경영 현황", Audience.EXE, List.of(
                     new MenuItem("평가 결과·보정", "/adjustments", "평가별 원점수와 보정점수를 보고 보정회차를 확정한다.", "bi-bar-chart-line"),

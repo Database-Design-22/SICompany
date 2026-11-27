@@ -11,12 +11,14 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 메뉴마다 기능이 만들어졌는지 알려 준다.
- * PlaceholderController가 맡은 주소는 "준비 중"이다. 따로 목록을 두지 않고 실제 주소 매핑에서 읽으므로,
- * 기능을 만들어 PlaceholderController에서 주소를 지우면 메뉴 표시도 저절로 바뀐다.
+ * 이름이 PlaceholderController인 컨트롤러가 맡은 주소는 "준비 중"이다 (지금은 모든 메뉴를 만들어 그 컨트롤러가 없다).
+ * 새 메뉴를 먼저 "준비 중"으로 두려면 그 이름의 컨트롤러에 주소를 매핑하면 되고, 따로 목록을 고칠 필요가 없다.
  */
 @Component
 @RequiredArgsConstructor
 public class MenuStatus {
+
+    private static final String PLACEHOLDER_CONTROLLER = "PlaceholderController";
 
     private final ApplicationContext applicationContext;
 
@@ -32,7 +34,7 @@ public class MenuStatus {
             RequestMappingHandlerMapping mapping =
                     applicationContext.getBean("requestMappingHandlerMapping", RequestMappingHandlerMapping.class);
             mapping.getHandlerMethods().forEach((info, method) -> {
-                if (method.getBeanType().equals(PlaceholderController.class) && info.getPathPatternsCondition() != null) {
+                if (PLACEHOLDER_CONTROLLER.equals(method.getBeanType().getSimpleName()) && info.getPathPatternsCondition() != null) {
                     paths.addAll(info.getPathPatternsCondition().getPatternValues());
                 }
             });

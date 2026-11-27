@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('합격자 명부')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 인력 관리</nav>
+    <h1 class="h3">합격자 명부</h1>
+    <p class="text-secondary">
+        회원가입은 이 명부와 이름·주민등록번호·직군을 대조해서만 됩니다. 가입하면 명부에서 그 사람의 행이 지워집니다.
+        주민등록번호는 해시로 저장해 화면에 보여 주지 않습니다.
+    </p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">등록했습니다.</div>
+
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <form method="post" th:action="@{/passers}" class="card">
+                <div class="card-header">합격자 등록</div>
+                <div class="card-body row g-2">
+                    <div class="col-6">
+                        <label class="form-label small" for="passerNm">이름</label>
+                        <input class="form-control form-control-sm" id="passerNm" name="passerNm" maxlength="50" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="rrn">주민등록번호</label>
+                        <input class="form-control form-control-sm" id="rrn" name="rrn" placeholder="900101-1234567" autocomplete="off" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="jobgrp">직군</label>
+                        <select class="form-select form-select-sm" id="jobgrp" name="jobgrp">
+                            <option value="개발">개발</option>
+                            <option value="비개발">비개발</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="deptId">배정 부서 (비개발)</label>
+                        <select class="form-select form-select-sm" id="deptId" name="deptId">
+                            <option value="">없음</option>
+                            <option th:each="d : ${depts}" th:value="${d.deptId}" th:text="${d.deptNm}">부서</option>
+                        </select>
+                    </div>
+                    <div class="col-12"><button type="submit" class="btn btn-primary btn-sm">등록</button></div>
+                </div>
+            </form>
+        </div>
+        <div class="col-lg-7">
+            <div class="alert alert-light border" th:if="${passers.isEmpty()}">명부에 남은 합격자가 없습니다.</div>
+            <div class="table-responsive" th:unless="${passers.isEmpty()}">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr><th>번호</th><th>이름</th><th>직군</th><th>배정 부서</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="p : ${passers}">
+                        <td class="text-secondary" th:text="${p.passerId}">1</td>
+                        <td th:text="${p.passerNm}">이름</td>
+                        <td th:text="${p.jobgrp}">개발</td>
+                        <td th:text="${p.deptNm != null} ? ${p.deptNm} : '-'">부서</td>
+                        <td class="text-end">
+                            <form method="post" class="d-inline" th:action="@{/passers/{id}/delete(id=${p.passerId})}"
+                                  th:attr="data-confirm=|가입하지 않은 합격자 ${p.passerNm}을(를) 명부에서 지울까요?|">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
