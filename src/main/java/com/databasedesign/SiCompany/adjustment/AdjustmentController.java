@@ -99,8 +99,8 @@ public class AdjustmentController {
         user.require(CurrentUser.EXE);
         List<Integer> years = adjustmentService.findEvalYears();
         int selectedYear = year != null ? year : (years.isEmpty() ? LocalDate.now().getYear() : years.get(0));
-        // 처음 들어오면 PM, "전체"를 고르면 빈 값(div=)이 온다. (defaultValue는 빈 값에도 적용되므로 쓰지 않는다)
-        String selectedDiv = adjustmentService.normalizeDiv(div == null ? "PM" : div);
+        // 처음 들어오면 전체(PM·동료·고객), 구분을 고르면 그 구분만 본다. "전체"를 고르면 빈 값(div=)이 온다.
+        String selectedDiv = adjustmentService.normalizeDiv(div == null ? "" : div);
 
         model.addAttribute("years", years);
         model.addAttribute("divs", AdjustmentService.EVAL_DIVS);
