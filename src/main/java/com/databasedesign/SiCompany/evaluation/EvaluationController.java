@@ -57,7 +57,17 @@ public class EvaluationController {
                 new ExecutedSql("평가 한 건 (내가 평가자인지 확인)", EvaluationRepository.FIND_MY_EVALUATION),
                 new ExecutedSql("평가구분에 맞는 문항과 입력한 점수", EvaluationRepository.FIND_QUESTIONS),
                 new ExecutedSql("평가항목별 내용", EvaluationRepository.FIND_CONTENTS)));
-        if (!page.evaluation().isSubmitted()) {
+        if (page.evaluation().isCustomer()) {
+            sqls.add(new ExecutedSql("고객평가 의뢰·회수 정보", EvaluationRepository.FIND_CUST_INFO));
+        }
+        if (!page.evaluation().isSubmitted() && page.evaluation().isCustomer()) {
+            sqls.addAll(List.of(
+                    new ExecutedSql("저장할 때: 문항 점수", EvaluationRepository.UPSERT_SCORE),
+                    new ExecutedSql("저장할 때: 비운 점수 지우기", EvaluationRepository.DELETE_SCORE),
+                    new ExecutedSql("저장할 때: 평가내용", EvaluationRepository.UPSERT_CONTENT),
+                    new ExecutedSql("제출할 때 ①: 완성 여부 확인", EvaluationRepository.FIND_COMPLETENESS),
+                    new ExecutedSql("제출할 때 ②: 상태 '제출', 평가일자 오늘", EvaluationRepository.SUBMIT_EVALUATION)));
+        } else if (!page.evaluation().isSubmitted()) {
             sqls.addAll(List.of(
                     new ExecutedSql("이 피평가자에 대해 내가 쓴 메모", MemoRepository.FIND_MEMOS_BY_TARGET),
                     new ExecutedSql("저장할 때: 문항 점수", EvaluationRepository.UPSERT_SCORE),
@@ -85,8 +95,8 @@ public class EvaluationController {
             }
             case "submit" -> {
                 int deletedMemos = evaluationService.submit(user, evalId, input);
-                redirect.addFlashAttribute("notice",
-                        "평가를 제출했습니다. 이 피평가자에 대한 평가메모 " + deletedMemos + "건을 삭제했습니다.");
+                redirect.addFlashAttribute("notice", deletedMemos < 0 ? "평가를 제출했습니다."
+                        : "평가를 제출했습니다. 이 피평가자에 대한 평가메모 " + deletedMemos + "건을 삭제했습니다.");
             }
             default -> throw new BusinessException("알 수 없는 요청입니다. (" + action + ")");
         }

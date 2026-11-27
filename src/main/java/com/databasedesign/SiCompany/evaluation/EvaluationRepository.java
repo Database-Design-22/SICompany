@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import com.databasedesign.SiCompany.evaluation.EvaluationDtos.Completeness;
+import com.databasedesign.SiCompany.evaluation.EvaluationDtos.CustInfo;
 import com.databasedesign.SiCompany.evaluation.EvaluationDtos.EvalSummary;
 import com.databasedesign.SiCompany.evaluation.EvaluationDtos.Evaluation;
 import com.databasedesign.SiCompany.evaluation.EvaluationDtos.ItemContent;
@@ -40,7 +41,7 @@ public class EvaluationRepository {
             ORDER BY FIELD(e.EVAL_STAT, '작성중', '제출'), e.EVAL_DT DESC, e.EVAL_ID
             """;
 
-    /** 2. 평가 한 건 (내가 평가자인 것만) */
+    /** 2. 평가 한 건 (내가 평가자인 것, 또는 내가 PM인 프로젝트의 고객평가: PM이 회수한 평가서를 입력한다) */
     public static final String FIND_MY_EVALUATION = """
             SELECT e.EVAL_ID, e.EVAL_DIV, e.EVAL_STAT, e.EVAL_DT,
                    e.PRJ_ID, p.PRJ_NM, e.EVLTE_EMP_ID, t.EMP_NM AS EVLTE_EMP_NM
@@ -50,16 +51,23 @@ public class EvaluationRepository {
             JOIN TB_PRJ p ON p.PRJ_ID = e.PRJ_ID
             JOIN TB_EMP t ON t.EMP_ID = e.EVLTE_EMP_ID
             WHERE e.EVAL_ID = ?
-              AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?)
+              AND (pm.EVLTR_EMP_ID = ? OR pe.EVLTR_EMP_ID = ?
+                   OR (e.EVAL_DIV = '고객'
+                       AND EXISTS (SELECT 1
+                                   FROM TB_PRJ_PTCP x
+                                   WHERE x.PRJ_ID = e.PRJ_ID
+                                     AND x.EMP_ID = ?
+                                     AND x.ROLE_ID = 'PM')))
             """;
 
-    /** 3. 평가구분에 맞는 문항과 입력한 점수 (PM은 PM_USE_YN, 동료는 PEER_USE_YN) */
+    /** 3. 평가구분에 맞는 문항과 입력한 점수 (PM은 PM_USE_YN, 동료는 PEER_USE_YN, 고객은 CUST_USE_YN) */
     public static final String FIND_QUESTIONS = """
             SELECT q.QSTN_ID, q.QSTN_CN, q.EVAL_ITEM_ID, s.SCORE
             FROM TB_EVAL e
             JOIN TB_EVAL_QSTN q
               ON (e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
               OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+              OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y')
             LEFT JOIN TB_EVAL_QSTN_SCORE s ON s.EVAL_ID = e.EVAL_ID AND s.QSTN_ID = q.QSTN_ID
             WHERE e.EVAL_ID = ?
             ORDER BY q.EVAL_ITEM_ID DESC, q.QSTN_ID
@@ -102,13 +110,15 @@ public class EvaluationRepository {
               (SELECT COUNT(*)
                FROM TB_EVAL_QSTN q
                WHERE (e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
-                  OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')) AS QSTN_CNT,
+                  OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+                  OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y')) AS QSTN_CNT,
               (SELECT COUNT(*)
                FROM TB_EVAL_QSTN_SCORE s
                JOIN TB_EVAL_QSTN q ON q.QSTN_ID = s.QSTN_ID
                WHERE s.EVAL_ID = e.EVAL_ID
                  AND ((e.EVAL_DIV = 'PM' AND q.PM_USE_YN = 'Y')
-                   OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y'))) AS SCORE_CNT,
+                   OR (e.EVAL_DIV = '동료' AND q.PEER_USE_YN = 'Y')
+                   OR (e.EVAL_DIV = '고객' AND q.CUST_USE_YN = 'Y'))) AS SCORE_CNT,
               (SELECT COUNT(*) FROM TB_EVAL_ITEM) AS ITEM_CNT,
               (SELECT COUNT(*)
                FROM TB_EVAL_CN c
@@ -127,6 +137,15 @@ public class EvaluationRepository {
                 EVAL_DT = CURDATE()
             WHERE EVAL_ID = ?
               AND EVAL_STAT = '작성중'
+            """;
+
+    /** 11. 고객평가의 의뢰·회수 정보 (제출할 때 회수일자가 있어야 한다) */
+    public static final String FIND_CUST_INFO = """
+            SELECT c.CLIENT_NM, m.MGR_NM, ce.REQ_DT, ce.COLL_DT
+            FROM TB_CUST_EVAL ce
+            JOIN TB_CLIENT c     ON c.CLIENT_ID = ce.CLIENT_ID
+            JOIN TB_CLIENT_MGR m ON m.CLIENT_ID = ce.CLIENT_ID AND m.MGR_ID = ce.EVAL_MGR_ID
+            WHERE ce.EVAL_ID = ?
             """;
 
     /** 10. 그 (평가자, 피평가자, 프로젝트)의 평가메모 삭제 */
@@ -164,7 +183,7 @@ public class EvaluationRepository {
     }
 
     public Optional<Evaluation> findMyEvaluation(int evalId, String evltrEmpId) {
-        return jdbcTemplate.query(FIND_MY_EVALUATION, EVALUATION_MAPPER, evalId, evltrEmpId, evltrEmpId)
+        return jdbcTemplate.query(FIND_MY_EVALUATION, EVALUATION_MAPPER, evalId, evltrEmpId, evltrEmpId, evltrEmpId)
                 .stream().findFirst();
     }
 
@@ -211,5 +230,13 @@ public class EvaluationRepository {
 
     public int deleteMemos(String wrtrEmpId, String trgtEmpId, String prjId) {
         return jdbcTemplate.update(DELETE_MEMOS_OF_EVALUATION, wrtrEmpId, trgtEmpId, prjId);
+    }
+
+    public Optional<CustInfo> findCustInfo(int evalId) {
+        return jdbcTemplate.query(FIND_CUST_INFO, (rs, i) -> new CustInfo(
+                rs.getString("CLIENT_NM"),
+                rs.getString("MGR_NM"),
+                rs.getObject("REQ_DT", LocalDate.class),
+                rs.getObject("COLL_DT", LocalDate.class)), evalId).stream().findFirst();
     }
 }

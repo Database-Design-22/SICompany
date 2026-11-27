@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('고객평가 입력')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 내 업무</nav>
+    <h1 class="h3">고객평가 입력</h1>
+    <p class="text-secondary">
+        종료된 프로젝트의 PM이 팀원별로 발주처 담당자에게 평가서를 의뢰하고, 회수한 평가서의 점수와 내용을 옮겨 적습니다.
+        의뢰 → 회수일자 기록 → 입력·제출 순서로 진행합니다. 고객평가는 보정하지 않습니다.
+    </p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">의뢰했습니다.</div>
+
+    <div class="empty-state" th:if="${projects.isEmpty()}">
+        <div class="icon"><i class="bi bi-chat-square-quote"></i></div>
+        <h2 class="h5">고객평가를 입력할 프로젝트가 없습니다</h2>
+        <p class="text-secondary mb-0">내가 PM으로 참여한 프로젝트가 종료되면 여기서 고객평가를 의뢰할 수 있습니다.</p>
+    </div>
+
+    <th:block th:unless="${projects.isEmpty()}">
+        <form method="get" th:action="@{/evaluations/customer}" class="card card-body mb-3">
+            <label for="prjId" class="form-label">내가 PM인 종료 프로젝트</label>
+            <select id="prjId" name="prjId" class="form-select" onchange="this.form.submit()">
+                <option th:each="p : ${projects}" th:value="${p.prjId}"
+                        th:selected="${project != null and project.prjId == p.prjId}"
+                        th:text="|${p.prjId} ${p.prjNm} · 종료 ${p.endDt} · 의뢰 ${p.reqCnt}/${p.memberCnt} · 제출 ${p.submitCnt}|">프로젝트</option>
+            </select>
+        </form>
+
+        <th:block th:if="${project != null}">
+            <h2 class="h5" th:text="|${project.prjNm} · 발주처 ${project.clientNm}|">프로젝트</h2>
+
+            <form method="post" id="request-form" th:action="@{/evaluations/customer/request}"
+                  data-confirm="고른 팀원의 고객평가를 오늘 날짜로 의뢰할까요?">
+                <input type="hidden" name="prjId" th:value="${project.prjId}">
+            </form>
+
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th style="width: 2.5rem"></th>
+                        <th>피평가자</th>
+                        <th>직무</th>
+                        <th>의뢰</th>
+                        <th>회수</th>
+                        <th>입력</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="t : ${targets}">
+                        <td>
+                            <input class="form-check-input" type="checkbox" name="empIds" form="request-form"
+                                   th:value="${t.empId}" th:unless="${t.requested}" th:id="|chk-${t.empId}|">
+                        </td>
+                        <td class="text-nowrap">
+                            <label th:for="|chk-${t.empId}|" th:text="${t.empNm}">이름</label>
+                            <span class="small text-secondary" th:text="${t.empId}">ID</span>
+                        </td>
+                        <td class="text-nowrap" th:text="${t.roleNm}">PM</td>
+                        <td class="text-nowrap">
+                            <span class="badge text-bg-secondary" th:unless="${t.requested}">의뢰 전</span>
+                            <th:block th:if="${t.requested}">
+                                <div th:text="${t.reqDt}">의뢰일</div>
+                                <div class="small text-secondary" th:text="${t.mgrNm}">담당자</div>
+                            </th:block>
+                        </td>
+                        <td class="text-nowrap">
+                            <span th:if="${t.requested and t.collDt != null and t.submitted}" th:text="${t.collDt}">회수일</span>
+                            <form method="post" class="d-flex gap-1" th:if="${t.requested and !t.submitted}"
+                                  th:action="@{/evaluations/customer/{id}/collect(id=${t.evalId})}">
+                                <input type="date" name="collDt" class="form-control form-control-sm w-auto"
+                                       th:value="${t.collDt != null ? t.collDt : today}" required>
+                                <button type="submit" class="btn btn-sm"
+                                        th:classappend="${t.collDt == null} ? 'btn-outline-primary' : 'btn-outline-secondary'"
+                                        th:text="${t.collDt == null} ? '회수' : '고치기'">회수</button>
+                            </form>
+                        </td>
+                        <td class="text-nowrap">
+                            <th:block th:if="${t.requested}">
+                                <span class="badge text-bg-secondary" th:if="${t.submitted}" th:text="|제출 ${t.evalDt}|">제출</span>
+                                <span class="badge text-bg-warning" th:unless="${t.submitted}" th:text="|작성중 · 점수 ${t.scoreCnt}개|">작성중</span>
+                                <a class="btn btn-sm btn-outline-primary ms-1" th:href="@{/evaluations/{id}(id=${t.evalId})}"
+                                   th:text="${t.submitted} ? '보기' : '입력'">입력</a>
+                            </th:block>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card card-body d-flex flex-row flex-wrap align-items-end gap-2">
+                <div>
+                    <label for="mgrId" class="form-label small mb-1">평가담당자 (발주처 담당자)</label>
+                    <select id="mgrId" name="mgrId" class="form-select form-select-sm" form="request-form" required>
+                        <option value="">-- 담당자를 고르세요 --</option>
+                        <option th:each="m : ${managers}" th:value="${m.mgrId}" th:text="${m.mgrNm}">담당자</option>
+                    </select>
+                </div>
+                <button type="submit" form="request-form" class="btn btn-primary btn-sm">고른 팀원 의뢰</button>
+                <span class="small text-secondary">의뢰 전인 팀원을 표에서 골라 한 번에 의뢰합니다. 피평가자당 1건입니다.</span>
+            </div>
+        </th:block>
+    </th:block>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

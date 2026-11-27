@@ -21,8 +21,6 @@ public class PlaceholderController {
     @GetMapping({
             // 공통
             "/me", "/certificates",
-            // 내 업무
-            "/evaluations/customer",
             // 인력 관리
             "/certificates/issue",
             // 경영 현황

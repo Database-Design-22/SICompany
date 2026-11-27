@@ -6,7 +6,9 @@
 
 <main class="container py-4" th:with="ev=${page.evaluation}, submitted=${page.evaluation.submitted}">
     <nav class="small text-secondary mb-1">
-        <a th:href="@{/}">홈</a> / <a th:href="@{/evaluations}">내 평가</a>
+        <a th:href="@{/}">홈</a> /
+        <a th:href="@{/evaluations}" th:unless="${ev.customer}">내 평가</a>
+        <a th:href="@{/evaluations/customer(prjId=${ev.prjId})}" th:if="${ev.customer}">고객평가 입력</a>
     </nav>
     <h1 class="h3">
         <span th:text="${ev.evlteEmpNm}">이름</span> 평가
@@ -17,7 +19,7 @@
     <div class="alert alert-success" th:if="${notice}" th:text="${notice}">저장했습니다.</div>
     <div class="alert alert-secondary" th:if="${submitted}">
         <span th:text="|${ev.evalDt}에 제출한 평가입니다.|">제출일</span> 제출된 평가는 고칠 수 없어 읽기 전용으로 보여 줍니다.
-        이 피평가자에 대해 쓴 평가메모는 제출할 때 삭제되었습니다.
+        <span th:unless="${ev.customer}">이 피평가자에 대해 쓴 평가메모는 제출할 때 삭제되었습니다.</span>
     </div>
     <p class="small text-secondary" th:unless="${submitted}">
         모든 문항 점수와 두 항목의 장점·단점·바라는 점을 채워야 제출할 수 있습니다.
@@ -93,8 +95,9 @@
                         <div class="modal-body">
                             <ul class="mb-3">
                                 <li>제출하면 점수와 내용을 <strong>다시 고칠 수 없습니다.</strong></li>
-                                <li>이 피평가자에 대해 쓴 평가메모
+                                <li th:unless="${ev.customer}">이 피평가자에 대해 쓴 평가메모
                                     <strong th:text="|${page.memos.size()}건|">0건</strong>이 삭제됩니다.</li>
+                                <li th:if="${ev.customer}">고객평가는 평가서 회수일자가 있어야 제출됩니다.</li>
                             </ul>
                             <div id="empty-warning" class="alert alert-warning mb-0 d-none">
                                 아직 비어 있는 칸: 점수 <strong id="empty-scores">0</strong>개,
@@ -114,8 +117,25 @@
             </div>
         </div>
 
-        <!-- 오른쪽: 이 피평가자에 대해 내가 쓴 메모 (작성중인 평가에만 보인다) -->
-        <div class="col-lg-4" th:unless="${submitted}">
+        <!-- 오른쪽(고객평가): 의뢰·회수 정보 -->
+        <div class="col-lg-4" th:if="${!submitted and ev.customer and page.custInfo != null}">
+            <div class="card">
+                <div class="card-header fw-semibold">고객평가 의뢰·회수</div>
+                <div class="card-body small">
+                    <div class="mb-1"><span class="text-secondary">평가자</span>
+                        <span th:text="|${page.custInfo.clientNm} · ${page.custInfo.mgrNm}|">발주처 · 담당자</span></div>
+                    <div class="mb-1"><span class="text-secondary">의뢰일자</span> <span th:text="${page.custInfo.reqDt}">의뢰일</span></div>
+                    <div><span class="text-secondary">회수일자</span>
+                        <span th:if="${page.custInfo.collDt != null}" th:text="${page.custInfo.collDt}">회수일</span>
+                        <span class="badge text-bg-warning" th:if="${page.custInfo.collDt == null}">회수 전</span></div>
+                    <p class="text-secondary mt-2 mb-0">고객사 담당자가 작성한 평가서를 PM이 그대로 옮겨 적습니다.
+                        회수일자는 고객평가 입력 화면에서 넣습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 오른쪽: 이 피평가자에 대해 내가 쓴 메모 (작성중인 PM·동료 평가에만 보인다) -->
+        <div class="col-lg-4" th:if="${!submitted and !ev.customer}">
             <div class="card">
                 <div class="card-header fw-semibold">
                     내가 쓴 평가메모 <span class="text-secondary" th:text="|${page.memos.size()}건|">0건</span>

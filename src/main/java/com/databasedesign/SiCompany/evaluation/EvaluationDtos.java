@@ -29,6 +29,10 @@ public final class EvaluationDtos {
         public boolean isSubmitted() {
             return "제출".equals(evalStat);
         }
+
+        public boolean isCustomer() {
+            return "고객".equals(evalDiv);
+        }
     }
 
     /** 평가구분에 맞는 문항과 입력한 점수 (score가 null이면 아직 입력하지 않음) */
@@ -43,9 +47,13 @@ public final class EvaluationDtos {
     public record Completeness(int qstnCnt, int scoreCnt, int itemCnt, int cnCnt) {
     }
 
-    /** ② 평가 화면 전체 */
+    /** 고객평가의 의뢰·회수 정보 (회수 전이면 collDt가 null) */
+    public record CustInfo(String clientNm, String mgrNm, LocalDate reqDt, LocalDate collDt) {
+    }
+
+    /** ② 평가 화면 전체. 고객평가면 memos는 비어 있고 custInfo가 있다 */
     public record EvalPage(Evaluation evaluation, List<Question> questions, List<ItemContent> contents,
-                           List<Memo> memos) {
+                           List<Memo> memos, CustInfo custInfo) {
     }
 
     /** 화면에서 받은 입력. scores: 문항ID → 입력 문자열, contents: 평가항목ID → 내용 */

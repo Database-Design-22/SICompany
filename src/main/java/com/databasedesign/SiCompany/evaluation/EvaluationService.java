@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 /**
  * 평가 작성과 제출 규칙 (CLAUDE.md 시나리오 1)
  * - 현재 사용자가 평가자(TB_PM_EVAL 또는 TB_PEER_EVAL의 EVLTR_EMP_ID)인 '작성중' 평가만 작성한다.
+ * - 고객평가는 그 프로젝트의 PM이 회수한 평가서를 옮겨 적는다. 회수일자가 있어야 제출되고 메모는 지우지 않는다.
  * - 문항은 평가구분에 맞는 사용여부가 'Y'인 것만 쓴다. 점수는 0~10 정수.
  * - 임시 저장은 점수와 내용만 저장하고 상태는 '작성중'으로 둔다.
  * - 제출은 한 트랜잭션: 완성 여부 확인 → EVAL_STAT='제출', EVAL_DT=오늘 → 그 평가의 메모 삭제.
@@ -42,16 +43,21 @@ public class EvaluationService {
         return evaluationRepository.findMyEvaluations(user.empId());
     }
 
-    /** 제출된 평가는 메모가 이미 삭제됐으므로 메모를 조회하지 않는다. */
+    /**
+     * 제출된 평가는 메모가 이미 삭제됐으므로 메모를 조회하지 않는다.
+     * 고객평가는 평가자가 고객사 담당자라 메모가 없고, 대신 의뢰·회수 정보를 보여 준다.
+     */
     public EvalPage getEvalPage(CurrentUser user, int evalId) {
         Evaluation evaluation = getMyEvaluation(user, evalId);
+        boolean noMemos = evaluation.isSubmitted() || evaluation.isCustomer();
         return new EvalPage(
                 evaluation,
                 evaluationRepository.findQuestions(evalId),
                 evaluationRepository.findContents(evalId),
-                evaluation.isSubmitted()
+                noMemos
                         ? List.of()
-                        : memoRepository.findMemosByTarget(user.empId(), evaluation.evlteEmpId(), evaluation.prjId()));
+                        : memoRepository.findMemosByTarget(user.empId(), evaluation.evlteEmpId(), evaluation.prjId()),
+                evaluation.isCustomer() ? evaluationRepository.findCustInfo(evalId).orElse(null) : null);
     }
 
     /** 임시 저장: 점수와 내용만 저장하고 상태는 '작성중' 그대로 둔다. */
@@ -63,7 +69,7 @@ public class EvaluationService {
 
     /**
      * 제출 (한 트랜잭션). 중간에 예외가 나면 이번 입력의 저장까지 모두 되돌린다.
-     * @return 삭제한 평가메모 수
+     * @return 삭제한 평가메모 수 (고객평가는 메모를 지우지 않으므로 -1)
      */
     @Transactional
     public int submit(CurrentUser user, int evalId, EvalInput input) {
@@ -83,9 +89,20 @@ public class EvaluationService {
                     + "장점, 단점, 바라는 점을 모두 쓰세요. (" + c.cnCnt() + "/" + c.itemCnt() + ")");
         }
 
+        // 고객평가는 회수한 평가서를 옮겨 적는 것이므로 회수일자가 있어야 한다.
+        if (evaluation.isCustomer()) {
+            boolean collected = evaluationRepository.findCustInfo(evalId).map(ci -> ci.collDt() != null).orElse(false);
+            if (!collected) {
+                throw new BusinessException("고객평가는 평가서를 회수한 뒤에 제출할 수 있습니다. 고객평가 입력 화면에서 회수일자를 먼저 넣으세요.");
+            }
+        }
+
         // 3. 상태 '제출', 평가일자 오늘
         if (evaluationRepository.submit(evalId) != 1) {
             throw new BusinessException("이미 제출된 평가입니다.");
+        }
+        if (evaluation.isCustomer()) {
+            return -1;
         }
 
         // 4. 그 (평가자, 피평가자, 프로젝트)의 평가메모 삭제
