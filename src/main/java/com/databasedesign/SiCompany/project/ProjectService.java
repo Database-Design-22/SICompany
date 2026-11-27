@@ -11,8 +11,10 @@ import com.databasedesign.SiCompany.project.ProjectDtos.ClientManager;
 import com.databasedesign.SiCompany.project.ProjectDtos.CloseResult;
 import com.databasedesign.SiCompany.project.ProjectDtos.EvalCount;
 import com.databasedesign.SiCompany.project.ProjectDtos.EvalPair;
+import com.databasedesign.SiCompany.project.ProjectDtos.HistDetail;
 import com.databasedesign.SiCompany.project.ProjectDtos.MemberHist;
 import com.databasedesign.SiCompany.project.ProjectDtos.ProjectRow;
+import com.databasedesign.SiCompany.project.ProjectDtos.WithdrawReason;
 
 import lombok.RequiredArgsConstructor;
 
@@ -107,6 +109,86 @@ public class ProjectService {
         if (projectRepository.updateProject(prjId, prjNm, strtDt, schdEndDt, mgrId) != 1) {
             throw new BusinessException("이미 종료되었거나 중단된 프로젝트입니다. (" + prjId + ")");
         }
+    }
+
+    public List<WithdrawReason> findWithdrawReasons() {
+        return projectRepository.findWithdrawReasons();
+    }
+
+    /**
+     * 철수: 열린 투입 이력을 종료일자와 철수사유(PLAN·MOVE·SELF)로 닫는다.
+     * PM의 투입은 종료·중단으로만 닫히고, 접수된 교체 요청이 걸린 투입은 요청을 먼저 처리해야 한다.
+     * @return 프로젝트ID
+     */
+    @Transactional
+    public String withdraw(int prjHistId, String endDtText, String wthdrRsnId) {
+        HistDetail hist = getActiveHist(prjHistId);
+        if (!hist.isOpen()) {
+            throw new BusinessException("이미 끝난 투입입니다. (종료일 " + hist.endDt() + ")");
+        }
+        if ("PM".equals(hist.roleId())) {
+            throw new BusinessException("PM의 투입은 프로젝트를 종료하거나 중단할 때만 닫힙니다.");
+        }
+        if (findWithdrawReasons().stream().noneMatch(r -> r.wthdrRsnId().equals(wthdrRsnId))) {
+            throw new BusinessException("철수사유는 계획된 종료, 차출, 본인 사유 중에서 고르세요.");
+        }
+        if (hist.openReqCnt() > 0) {
+            throw new BusinessException("이 투입에 접수된 교체 요청이 있습니다. 교체 요청 메뉴에서 먼저 수용하거나 철회하세요.");
+        }
+        LocalDate endDt = parseDate(endDtText, "종료일자");
+        if (endDt.isBefore(hist.strtDt())) {
+            throw new BusinessException("종료일자는 투입 시작일(" + hist.strtDt() + ") 이후여야 합니다.");
+        }
+        if (endDt.isAfter(LocalDate.now())) {
+            throw new BusinessException("종료일자는 오늘 이후로 정할 수 없습니다.");
+        }
+        if (projectRepository.withdrawHist(prjHistId, endDt, wthdrRsnId) != 1) {
+            throw new BusinessException("이미 끝난 투입입니다. (이력 " + prjHistId + ")");
+        }
+        return hist.prjId();
+    }
+
+    /**
+     * 투입 기간 정정: 시작일자(열린 이력)나 시작·종료일자(닫힌 이력)를 고친다. 철수사유는 그대로 둔다.
+     * 교체 요청의 대상·후임으로 걸린 이력은 요청일자·처리일자와 어긋나므로 고칠 수 없다.
+     * @return 프로젝트ID
+     */
+    @Transactional
+    public String correct(int prjHistId, String strtDtText, String endDtText) {
+        HistDetail hist = getActiveHist(prjHistId);
+        if (hist.replLinkCnt() > 0) {
+            throw new BusinessException("교체 요청과 연결된 투입은 기간을 고칠 수 없습니다. (요청일자·처리일자와 맞춰져 있습니다)");
+        }
+        LocalDate strtDt = parseDate(strtDtText, "시작일자");
+        LocalDate endDt = null;
+        if (!hist.isOpen()) {
+            endDt = parseDate(endDtText, "종료일자");
+            if (endDt.isBefore(strtDt)) {
+                throw new BusinessException("종료일자는 시작일자(" + strtDt + ") 이후여야 합니다.");
+            }
+            if (endDt.isAfter(LocalDate.now())) {
+                throw new BusinessException("종료일자는 오늘 이후로 정할 수 없습니다.");
+            }
+        } else if (endDtText != null && !endDtText.isBlank()) {
+            throw new BusinessException("투입 중인 이력은 종료일자를 정정할 수 없습니다. 투입을 끝내려면 철수를 쓰세요.");
+        }
+        if (strtDt.isBefore(hist.prjStrtDt())) {
+            throw new BusinessException("시작일자는 프로젝트 시작일(" + hist.prjStrtDt() + ") 이후여야 합니다.");
+        }
+        if (projectRepository.countOverlappingHists(hist.empId(), prjHistId, strtDt, endDt) > 0) {
+            throw new BusinessException(hist.empNm() + "의 다른 투입과 기간이 겹칩니다.");
+        }
+        projectRepository.correctHist(prjHistId, strtDt, endDt);
+        return hist.prjId();
+    }
+
+    private HistDetail getActiveHist(int prjHistId) {
+        HistDetail hist = projectRepository.findHist(prjHistId)
+                .orElseThrow(() -> new BusinessException("투입 이력을 찾을 수 없습니다. (" + prjHistId + ")"));
+        if (!"진행".equals(hist.prjStat()) && !"지연".equals(hist.prjStat())) {
+            throw new BusinessException("진행 또는 지연 중인 프로젝트의 투입만 고칠 수 있습니다. (현재: " + hist.prjStat() + ")");
+        }
+        return hist;
     }
 
     private String requireName(String text) {

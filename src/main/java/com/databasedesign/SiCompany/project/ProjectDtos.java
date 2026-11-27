@@ -37,6 +37,19 @@ public final class ProjectDtos {
     public record ClientManager(int clientId, String clientNm, int mgrId, String mgrNm) {
     }
 
+    /** 정정·철수할 투입 이력 한 건. replLinkCnt: 교체 요청의 대상·후임으로 걸린 수, openReqCnt: '접수' 요청 수 */
+    public record HistDetail(int prjHistId, String empId, String empNm, String prjId, String roleId,
+                             LocalDate strtDt, LocalDate endDt, String wthdrRsnId,
+                             String prjStat, LocalDate prjStrtDt, int replLinkCnt, int openReqCnt) {
+        public boolean isOpen() {
+            return endDt == null;
+        }
+    }
+
+    /** 철수사유 (경영관리팀이 직접 고를 수 있는 것만) */
+    public record WithdrawReason(String wthdrRsnId, String wthdrRsnNm) {
+    }
+
     /** 종료·중단 처리 결과 */
     public record CloseResult(LocalDate endDt, int closedHistCnt, int pmEvalCnt, int peerEvalCnt, int deletedMemoCnt) {
     }

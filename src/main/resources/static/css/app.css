@@ -371,3 +371,9 @@ details.card > summary { cursor: pointer; }
 .empty-state.danger .icon { background: #fef3f2; color: #d92d20; }
 
 .min-w-0 { min-width: 0; }
+
+/* 표 안의 접었다 펴는 작은 처리 폼 (예: 투입 철수·정정) */
+.hist-actions { display: inline-block; margin-right: .25rem; vertical-align: top; }
+.hist-actions > summary { list-style: none; }
+.hist-actions > summary::-webkit-details-marker { display: none; }
+.hist-actions[open] { display: block; margin-bottom: .4rem; }

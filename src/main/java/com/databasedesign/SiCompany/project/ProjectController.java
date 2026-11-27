@@ -78,6 +78,8 @@ public class ProjectController {
         model.addAttribute("managers", projectService.findClientManagers(project.clientId()));
         model.addAttribute("hists", projectService.findMemberHists(prjId));
         model.addAttribute("evalCounts", projectService.findEvalCounts(prjId));
+        model.addAttribute("reasons", projectService.findWithdrawReasons());
+        model.addAttribute("today", java.time.LocalDate.now());
         model.addAttribute("executedSqls", List.of(
                 new ExecutedSql("프로젝트 한 건", ProjectRepository.FIND_PROJECT),
                 new ExecutedSql("팀원과 투입 이력", ProjectRepository.FIND_MEMBER_HISTS),
@@ -95,8 +97,35 @@ public class ProjectController {
                 new ExecutedSql("종료 ④-2: 동료평가 생성", ProjectRepository.INSERT_PEER_EVAL),
                 new ExecutedSql("중단 ①: 프로젝트 '중단'", ProjectRepository.STOP_PROJECT),
                 new ExecutedSql("중단 ②: 열린 투입 이력 닫기 (STOP)", ProjectRepository.CLOSE_OPEN_HISTS),
-                new ExecutedSql("중단 ③: 평가메모 삭제", ProjectRepository.DELETE_PROJECT_MEMOS)));
+                new ExecutedSql("중단 ③: 평가메모 삭제", ProjectRepository.DELETE_PROJECT_MEMOS),
+                new ExecutedSql("철수·정정 ①: 투입 이력 한 건 (교체 요청 연결 수)", ProjectRepository.FIND_HIST),
+                new ExecutedSql("철수 ②: 고를 수 있는 철수사유", ProjectRepository.FIND_WITHDRAW_REASONS),
+                new ExecutedSql("철수 ③: 열린 투입 닫기", ProjectRepository.WITHDRAW_HIST),
+                new ExecutedSql("정정 ②: 같은 직원의 겹치는 투입", ProjectRepository.COUNT_OVERLAPPING_HISTS),
+                new ExecutedSql("정정 ③: 투입 기간 고치기", ProjectRepository.CORRECT_HIST)));
         return "project/detail";
+    }
+
+    @PostMapping("/projects/hists/{prjHistId}/withdraw")
+    public String withdraw(@PathVariable int prjHistId,
+                           @RequestParam(required = false) String endDt,
+                           @RequestParam(required = false) String wthdrRsnId,
+                           CurrentUser user, RedirectAttributes redirect) {
+        user.require(CurrentUser.MGT);
+        String prjId = projectService.withdraw(prjHistId, endDt, wthdrRsnId);
+        redirect.addFlashAttribute("notice", "투입 이력 " + prjHistId + "번을 " + endDt + " 날짜로 철수 처리했습니다.");
+        return "redirect:/projects/" + prjId;
+    }
+
+    @PostMapping("/projects/hists/{prjHistId}/correct")
+    public String correct(@PathVariable int prjHistId,
+                          @RequestParam(required = false) String strtDt,
+                          @RequestParam(required = false) String endDt,
+                          CurrentUser user, RedirectAttributes redirect) {
+        user.require(CurrentUser.MGT);
+        String prjId = projectService.correct(prjHistId, strtDt, endDt);
+        redirect.addFlashAttribute("notice", "투입 이력 " + prjHistId + "번의 기간을 정정했습니다.");
+        return "redirect:/projects/" + prjId;
     }
 
     @PostMapping("/projects/{prjId}/end")

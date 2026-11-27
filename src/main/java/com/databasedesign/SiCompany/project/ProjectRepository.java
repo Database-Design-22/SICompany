@@ -16,8 +16,10 @@ import org.springframework.stereotype.Repository;
 import com.databasedesign.SiCompany.project.ProjectDtos.ClientManager;
 import com.databasedesign.SiCompany.project.ProjectDtos.EvalCount;
 import com.databasedesign.SiCompany.project.ProjectDtos.EvalPair;
+import com.databasedesign.SiCompany.project.ProjectDtos.HistDetail;
 import com.databasedesign.SiCompany.project.ProjectDtos.MemberHist;
 import com.databasedesign.SiCompany.project.ProjectDtos.ProjectRow;
+import com.databasedesign.SiCompany.project.ProjectDtos.WithdrawReason;
 
 import lombok.RequiredArgsConstructor;
 
@@ -120,6 +122,56 @@ public class ProjectRepository {
             SET PRJ_NM = ?, STRT_DT = ?, SCHD_END_DT = ?, MGR_ID = ?,
                 PRJ_STAT = CASE WHEN ? < CURDATE() THEN '지연' ELSE '진행' END
             WHERE PRJ_ID = ? AND PRJ_STAT IN ('진행', '지연')
+            """;
+
+    /** 정정·철수 ①: 투입 이력 한 건 (직무, 프로젝트 상태, 교체 요청과 걸린 수) */
+    public static final String FIND_HIST = """
+            SELECT h.PRJ_HIST_ID, h.EMP_ID, e.EMP_NM, h.PRJ_ID, pt.ROLE_ID,
+                   h.STRT_DT, h.END_DT, h.WTHDR_RSN_ID,
+                   p.PRJ_STAT, p.STRT_DT AS PRJ_STRT_DT,
+                   (SELECT COUNT(*) FROM TB_STAFF_REPL_REQ r
+                    WHERE r.REPL_TRGT_HIST_ID = h.PRJ_HIST_ID
+                       OR r.SUCC_HIST_ID = h.PRJ_HIST_ID) AS REPL_LINK_CNT,
+                   (SELECT COUNT(*) FROM TB_STAFF_REPL_REQ r
+                    WHERE r.REPL_TRGT_HIST_ID = h.PRJ_HIST_ID
+                      AND r.PROC_STAT = '접수') AS OPEN_REQ_CNT
+            FROM TB_PRJ_HIST h
+            JOIN TB_PRJ_PTCP pt ON pt.EMP_ID = h.EMP_ID AND pt.PRJ_ID = h.PRJ_ID
+            JOIN TB_PRJ p       ON p.PRJ_ID = h.PRJ_ID
+            JOIN TB_EMP e       ON e.EMP_ID = h.EMP_ID
+            WHERE h.PRJ_HIST_ID = ?
+            """;
+
+    /** 철수 ②: 경영관리팀이 고를 수 있는 철수사유 (CUST, RET, STOP은 교체 수용·퇴사·중단에서 자동으로 들어간다) */
+    public static final String FIND_WITHDRAW_REASONS = """
+            SELECT WTHDR_RSN_ID, WTHDR_RSN_NM
+            FROM TB_WTHDR_RSN
+            WHERE WTHDR_RSN_ID IN ('PLAN', 'MOVE', 'SELF')
+            ORDER BY FIELD(WTHDR_RSN_ID, 'PLAN', 'MOVE', 'SELF')
+            """;
+
+    /** 철수 ③: 열린 투입 이력을 닫는다 (열려 있을 때만 바뀐다) */
+    public static final String WITHDRAW_HIST = """
+            UPDATE TB_PRJ_HIST
+            SET END_DT = ?, WTHDR_RSN_ID = ?
+            WHERE PRJ_HIST_ID = ? AND END_DT IS NULL
+            """;
+
+    /** 정정 ②: 같은 직원의 다른 투입 이력 중 새 기간과 겹치는 것 (열린 이력은 끝이 없는 것으로 본다) */
+    public static final String COUNT_OVERLAPPING_HISTS = """
+            SELECT COUNT(*)
+            FROM TB_PRJ_HIST
+            WHERE EMP_ID = ?
+              AND PRJ_HIST_ID <> ?
+              AND STRT_DT <= ?
+              AND COALESCE(END_DT, '9999-12-31') >= ?
+            """;
+
+    /** 정정 ③: 투입 시작일자와 종료일자 (철수사유는 그대로) */
+    public static final String CORRECT_HIST = """
+            UPDATE TB_PRJ_HIST
+            SET STRT_DT = ?, END_DT = ?
+            WHERE PRJ_HIST_ID = ?
             """;
 
     /** 5. 검사: 종료일자는 모든 투입의 시작일자와 이미 닫힌 종료일자 이후여야 한다 */
@@ -260,6 +312,43 @@ public class ProjectRepository {
 
     public int updateProject(String prjId, String prjNm, LocalDate strtDt, LocalDate schdEndDt, int mgrId) {
         return jdbcTemplate.update(UPDATE_PROJECT, prjNm, strtDt, schdEndDt, mgrId, schdEndDt, prjId);
+    }
+
+    public Optional<HistDetail> findHist(int prjHistId) {
+        return jdbcTemplate.query(FIND_HIST, (rs, i) -> new HistDetail(
+                rs.getInt("PRJ_HIST_ID"),
+                rs.getString("EMP_ID"),
+                rs.getString("EMP_NM"),
+                rs.getString("PRJ_ID"),
+                rs.getString("ROLE_ID"),
+                rs.getObject("STRT_DT", LocalDate.class),
+                rs.getObject("END_DT", LocalDate.class),
+                rs.getString("WTHDR_RSN_ID"),
+                rs.getString("PRJ_STAT"),
+                rs.getObject("PRJ_STRT_DT", LocalDate.class),
+                rs.getInt("REPL_LINK_CNT"),
+                rs.getInt("OPEN_REQ_CNT")), prjHistId).stream().findFirst();
+    }
+
+    public List<WithdrawReason> findWithdrawReasons() {
+        return jdbcTemplate.query(FIND_WITHDRAW_REASONS, (rs, i) -> new WithdrawReason(
+                rs.getString("WTHDR_RSN_ID"),
+                rs.getString("WTHDR_RSN_NM")));
+    }
+
+    public int withdrawHist(int prjHistId, LocalDate endDt, String wthdrRsnId) {
+        return jdbcTemplate.update(WITHDRAW_HIST, endDt, wthdrRsnId, prjHistId);
+    }
+
+    /** @param endDt 열린 이력이면 null (끝이 없는 것으로 본다) */
+    public int countOverlappingHists(String empId, int prjHistId, LocalDate strtDt, LocalDate endDt) {
+        Integer count = jdbcTemplate.queryForObject(COUNT_OVERLAPPING_HISTS, Integer.class,
+                empId, prjHistId, endDt == null ? LocalDate.of(9999, 12, 31) : endDt, strtDt);
+        return count == null ? 0 : count;
+    }
+
+    public int correctHist(int prjHistId, LocalDate strtDt, LocalDate endDt) {
+        return jdbcTemplate.update(CORRECT_HIST, strtDt, endDt, prjHistId);
     }
 
     /** @return 투입 이력이 없으면 null */

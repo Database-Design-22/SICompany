@@ -78,6 +78,7 @@
                 <th class="text-nowrap">직무</th>
                 <th class="text-nowrap">투입 기간</th>
                 <th class="text-nowrap">철수사유</th>
+                <th class="text-nowrap" th:if="${project.active}">관리</th>
             </tr>
             </thead>
             <tbody>
@@ -90,6 +91,34 @@
                 <td class="text-nowrap" th:text="|${h.roleNm} (${h.roleId})|">PM</td>
                 <td class="text-nowrap" th:text="|${h.strtDt} ~ ${h.endDt != null ? h.endDt : '투입 중'}|">기간</td>
                 <td class="text-nowrap" th:text="${h.wthdrRsnId != null} ? |${h.wthdrRsnNm} (${h.wthdrRsnId})| : '-'">-</td>
+                <td th:if="${project.active}" style="min-width: 15rem">
+                    <details class="hist-actions" th:if="${h.endDt == null and h.roleId != 'PM'}">
+                        <summary class="btn btn-sm btn-outline-danger">철수</summary>
+                        <form method="post" th:action="@{/projects/hists/{id}/withdraw(id=${h.prjHistId})}"
+                              class="d-flex flex-wrap gap-1 mt-2"
+                              th:attr="data-confirm=|${h.empNm}의 투입을 끝낼까요?|">
+                            <input type="date" name="endDt" class="form-control form-control-sm w-auto"
+                                   th:value="${today}" required>
+                            <select name="wthdrRsnId" class="form-select form-select-sm w-auto" required>
+                                <option th:each="r : ${reasons}" th:value="${r.wthdrRsnId}" th:text="${r.wthdrRsnNm}">사유</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-danger">철수</button>
+                        </form>
+                    </details>
+                    <details class="hist-actions">
+                        <summary class="btn btn-sm btn-outline-secondary">기간 정정</summary>
+                        <form method="post" th:action="@{/projects/hists/{id}/correct(id=${h.prjHistId})}"
+                              class="d-flex flex-wrap align-items-center gap-1 mt-2">
+                            <input type="date" name="strtDt" class="form-control form-control-sm w-auto"
+                                   th:value="${h.strtDt}" required aria-label="시작일자">
+                            <span class="small text-secondary">~</span>
+                            <input type="date" name="endDt" class="form-control form-control-sm w-auto"
+                                   th:if="${h.endDt != null}" th:value="${h.endDt}" required aria-label="종료일자">
+                            <span class="small text-secondary" th:if="${h.endDt == null}">투입 중</span>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">저장</button>
+                        </form>
+                    </details>
+                </td>
             </tr>
             </tbody>
         </table>
