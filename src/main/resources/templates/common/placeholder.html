@@ -4,13 +4,19 @@
 <body>
 <div th:replace="~{fragments/layout :: header}"></div>
 
-<main class="container py-4">
+<main class="container">
     <nav class="small text-secondary mb-1">
         <a th:href="@{/}">홈</a> / <span th:text="${groupTitle}">메뉴 그룹</span>
     </nav>
     <h1 class="h3" th:text="${item.title}">화면 제목</h1>
     <p class="text-secondary" th:text="${item.description}">설명</p>
-    <div class="alert alert-light border">준비 중인 화면입니다.</div>
+
+    <div class="empty-state">
+        <div class="icon"><i class="bi" th:classappend="${item.icon}"></i></div>
+        <h2 class="h5">준비 중인 화면입니다</h2>
+        <p class="text-secondary mb-3">이 기능은 아직 만들지 않았습니다. 다른 메뉴를 이용하세요.</p>
+        <a class="btn btn-outline-secondary btn-sm" th:href="@{/}"><i class="bi bi-house-door"></i> 홈으로</a>
+    </div>
 </main>
 
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

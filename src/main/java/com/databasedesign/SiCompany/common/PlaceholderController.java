@@ -35,7 +35,7 @@ public class PlaceholderController {
         if (path.equals("/signup")) {
             model.addAttribute("groupTitle", "로그인 전");
             model.addAttribute("item", new Menus.MenuItem("회원가입", "/signup",
-                    "합격자 명부와 대조해 가입하고, 사번을 자동으로 받는다. 로그인ID 중복을 확인한다."));
+                    "합격자 명부와 대조해 가입하고, 사번을 자동으로 받는다. 로그인ID 중복을 확인한다.", "bi-person-plus"));
             return "common/placeholder";
         }
         Menus.MenuGroup group = Menus.findGroupByPath(path).orElseThrow();

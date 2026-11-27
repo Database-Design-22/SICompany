@@ -4,48 +4,80 @@
 <body>
 <div th:replace="~{fragments/layout :: header}"></div>
 
-<main class="container py-4">
+<main class="container">
 
-    <!-- 사용자를 고르지 않았을 때 -->
-    <div th:if="${currentUser == null}">
-        <h1 class="h3 mb-3">SI 프로젝트 인력·평가 관리 시스템</h1>
-        <div class="alert alert-warning">
-            화면 오른쪽 위에서 <strong>현재 사용자</strong>를 고르세요.
-            고른 직원의 권한에 맞는 메뉴가 열립니다. (로그인을 대신합니다)
+    <!-- 사용자를 고르지 않았을 때: 시스템 소개와 권한별 메뉴 -->
+    <th:block th:if="${currentUser == null}">
+        <div class="page-hero">
+            <div class="small text-secondary mb-1">DB 설계 팀 프로젝트</div>
+            <h1 class="h3 mb-2">SI 프로젝트 인력·평가 관리 시스템</h1>
+            <p class="text-secondary mb-3">
+                SI 회사의 프로젝트 인력 배치(투입·철수·교체)와 평가(평가메모·평가·점수 보정)를 관리합니다.
+                화면마다 아래쪽에서 그 화면이 실행한 SQL을 볼 수 있습니다.
+            </p>
+            <div class="alert alert-info d-flex align-items-center gap-2 mb-0">
+                <i class="bi bi-arrow-up-right-circle"></i>
+                <span>오른쪽 위 <strong>현재 사용자</strong>에서 직원을 고르면 로그인한 것처럼 그 사람의 권한에 맞는 메뉴가 열립니다.</span>
+            </div>
         </div>
-        <ul class="text-secondary small">
-            <li>개발직원: 내 프로젝트, 평가메모, 내 평가</li>
-            <li>경영관리팀: 교체 요청, 발주처 지정인력, 인력 배정, 프로젝트 관리</li>
-            <li>경영진: 평가 결과·보정, 프로젝트 현황, 직원 검색</li>
-        </ul>
-    </div>
 
-    <!-- 사용자를 골랐을 때: 볼 수 있는 메뉴를 카드로 -->
-    <div th:if="${currentUser != null}">
-        <h1 class="h3 mb-1">
-            <span th:text="${currentUser.empNm}">이름</span>님, 안녕하세요
-        </h1>
-        <p class="text-secondary mb-4">
-            <span th:text="${currentUser.empId}">직원ID</span> ·
-            <span th:text="${currentUser.empDiv}">개발</span>직원 ·
-            <span th:text="${currentUser.authNm}">권한</span>
-        </p>
-
-        <div class="row g-4">
-            <div class="col-md-6 col-xl-4" th:each="g : ${menuGroups}">
+        <h2 class="h5 mb-3">권한별 메뉴</h2>
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-3" th:each="g : ${allMenus}">
                 <div class="card h-100">
-                    <div class="card-header fw-semibold" th:text="${g.title}">메뉴 그룹</div>
-                    <div class="list-group list-group-flush">
-                        <a class="list-group-item list-group-item-action" th:each="m : ${g.items}"
-                           th:href="@{${m.path}}">
-                            <div class="fw-semibold" th:text="${m.title}">메뉴</div>
-                            <div class="small text-secondary" th:text="${m.description}">설명</div>
-                        </a>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span th:text="${g.title}">그룹</span>
+                        <span class="badge text-bg-light border" th:text="${g.audience}">대상</span>
                     </div>
+                    <ul class="list-unstyled mb-0 card-body">
+                        <li class="d-flex align-items-center gap-2 py-1" th:each="m : ${g.items}"
+                            th:classappend="${m.ready} ? '' : 'text-secondary'">
+                            <i class="bi" th:classappend="${m.icon}"></i>
+                            <span th:text="${m.title}">메뉴</span>
+                            <span class="badge text-bg-secondary ms-auto" th:unless="${m.ready}">준비 중</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
-    </div>
+    </th:block>
+
+    <!-- 사용자를 골랐을 때: 인사와 쓸 수 있는 메뉴 -->
+    <th:block th:if="${currentUser != null}">
+        <div class="page-hero d-flex flex-wrap align-items-center gap-3">
+            <span class="avatar" style="width:52px;height:52px;font-size:1.25rem"
+                  th:text="${#strings.substring(currentUser.empNm, 0, 1)}">김</span>
+            <div class="me-auto">
+                <h1 class="h3 mb-1"><span th:text="${currentUser.empNm}">이름</span>님, 안녕하세요</h1>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="role-chip"><i class="bi bi-person-vcard"></i><span th:text="${currentUser.empId}">직원ID</span></span>
+                    <span class="role-chip"><i class="bi bi-briefcase"></i><span th:text="|${currentUser.empDiv}직원|">개발직원</span></span>
+                    <span class="role-chip"><i class="bi bi-shield-check"></i><span th:text="${currentUser.authNm}">권한</span></span>
+                </div>
+            </div>
+        </div>
+
+        <section class="mb-4" th:each="g : ${sideMenu}">
+            <h2 class="h5 mb-3">
+                <span th:text="${g.title}">메뉴 그룹</span>
+                <span class="text-secondary fs-6 fw-normal" th:text="|· ${g.audience}|">대상</span>
+            </h2>
+            <div class="row g-3">
+                <div class="col-md-6 col-xl-4" th:each="m : ${g.items}">
+                    <a class="menu-tile" th:href="@{${m.path}}" th:classappend="${m.ready} ? '' : 'not-ready'">
+                        <span class="icon"><i class="bi" th:classappend="${m.icon}"></i></span>
+                        <span class="min-w-0">
+                            <span class="title d-flex align-items-center gap-2">
+                                <span th:text="${m.title}">메뉴</span>
+                                <span class="badge text-bg-secondary" th:unless="${m.ready}">준비 중</span>
+                            </span>
+                            <span class="desc d-block" th:text="${m.description}">설명</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </th:block>
 </main>
 
 <div th:replace="~{fragments/layout :: sql}"></div>

@@ -21,10 +21,12 @@ public class CurrentUserService {
         return currentUserRepository.findActiveEmployees();
     }
 
-    public void select(String empId, HttpSession session) {
+    /** @return 고른 사용자 */
+    public CurrentUser select(String empId, HttpSession session) {
         CurrentUser user = currentUserRepository.findActiveEmployeeById(empId)
                 .orElseThrow(() -> new BusinessException("재직 중인 직원만 현재 사용자로 고를 수 있습니다."));
         session.setAttribute(SESSION_KEY, user.empId());
+        return user;
     }
 
     public void clear(HttpSession session) {
