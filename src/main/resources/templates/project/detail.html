@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${project.prjNm})}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / <a th:href="@{/projects}">프로젝트 관리</a></nav>
+    <h1 class="h3">
+        <span th:text="${project.prjNm}">프로젝트</span>
+        <span class="fs-6 text-secondary" th:text="|${project.prjId} · ${project.prjStat}|">P26-000 · 진행</span>
+    </h1>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">처리했습니다.</div>
+
+    <div class="card card-body mb-3">
+        <div class="row small g-2">
+            <div class="col-sm-6"><span class="text-secondary">발주처 · 담당자</span>
+                <span th:text="|${project.clientNm} · ${project.mgrNm}|"></span></div>
+            <div class="col-sm-6"><span class="text-secondary">PM</span>
+                <span th:text="${project.pmEmpNm != null} ? |${project.pmEmpNm} (${project.pmEmpId})| : '없음'"></span></div>
+            <div class="col-sm-6"><span class="text-secondary">시작 · 예정 종료</span>
+                <span th:text="|${project.strtDt} ~ ${project.schdEndDt}|"></span></div>
+            <div class="col-sm-6"><span class="text-secondary">종료일자</span>
+                <span th:text="${project.endDt != null} ? ${project.endDt} : '-'"></span></div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3" th:if="${project.active}">
+            <form method="post" th:action="@{/projects/{id}/end(id=${project.prjId})}"
+                  th:attr="data-confirm=|${project.prjId}을(를) 오늘 날짜로 종료할까요?&#10;- 열린 투입 ${project.openHistCnt}건을 '계획된 종료'로 닫습니다.&#10;- PM평가와 동료평가를 '작성중'으로 만듭니다.&#10;종료한 프로젝트는 되돌릴 수 없습니다.|">
+                <button type="submit" class="btn btn-primary">종료</button>
+            </form>
+            <form method="post" th:action="@{/projects/{id}/stop(id=${project.prjId})}"
+                  th:attr="data-confirm=|${project.prjId}을(를) 오늘 날짜로 중단할까요?&#10;- 열린 투입 ${project.openHistCnt}건을 '프로젝트 중단'으로 닫습니다.&#10;- 이 프로젝트의 평가메모를 모두 삭제합니다. 평가는 하지 않습니다.&#10;중단한 프로젝트는 되돌릴 수 없습니다.|">
+                <button type="submit" class="btn btn-outline-danger">중단</button>
+            </form>
+        </div>
+        <div class="small text-secondary mt-3" th:unless="${project.active}"
+             th:text="|${project.prjStat}된 프로젝트입니다. 상태를 되돌릴 수 없습니다.|">종료된 프로젝트입니다.</div>
+    </div>
+
+    <h2 class="h5">팀원과 투입 이력 <span class="text-secondary fs-6" th:text="|${hists.size()}건|">0건</span></h2>
+    <div class="alert alert-light border" th:if="${hists.isEmpty()}">투입 이력이 없습니다.</div>
+    <div class="table-responsive" th:unless="${hists.isEmpty()}">
+        <table class="table align-middle">
+            <thead class="table-light">
+            <tr>
+                <th class="text-nowrap">이력</th>
+                <th class="text-nowrap">직원</th>
+                <th class="text-nowrap">직무</th>
+                <th class="text-nowrap">투입 기간</th>
+                <th class="text-nowrap">철수사유</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="h : ${hists}" th:classappend="${h.endDt == null} ? 'table-primary'">
+                <td class="text-secondary" th:text="${h.prjHistId}">1</td>
+                <td class="text-nowrap">
+                    <span th:text="${h.empNm}">이름</span>
+                    <span class="small text-secondary" th:text="${h.empId}">직원ID</span>
+                </td>
+                <td class="text-nowrap" th:text="|${h.roleNm} (${h.roleId})|">PM</td>
+                <td class="text-nowrap" th:text="|${h.strtDt} ~ ${h.endDt != null ? h.endDt : '투입 중'}|">기간</td>
+                <td class="text-nowrap" th:text="${h.wthdrRsnId != null} ? |${h.wthdrRsnNm} (${h.wthdrRsnId})| : '-'">-</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h5 mt-4">이 프로젝트의 평가</h2>
+    <div class="alert alert-light border" th:if="${evalCounts.isEmpty()}">
+        평가가 없습니다. 프로젝트를 종료하면 PM평가와 동료평가가 '작성중'으로 만들어집니다.
+    </div>
+    <table class="table table-sm w-auto" th:unless="${evalCounts.isEmpty()}">
+        <thead class="table-light">
+        <tr><th>평가구분</th><th>상태</th><th class="text-end">건수</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${evalCounts}">
+            <td th:text="${c.evalDiv}">PM</td>
+            <td th:text="${c.evalStat}">작성중</td>
+            <td class="text-end" th:text="${c.cnt}">0</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

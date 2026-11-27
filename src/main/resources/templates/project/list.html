@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('프로젝트 관리')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 인력 관리</nav>
+    <h1 class="h3">프로젝트 관리</h1>
+    <p class="text-secondary">프로젝트를 고르면 팀원과 투입 이력을 보고 종료·중단을 처리할 수 있습니다.</p>
+
+    <form method="get" th:action="@{/projects}" class="d-flex gap-2 align-items-center mb-3">
+        <label for="stat" class="small text-secondary">상태</label>
+        <select id="stat" name="stat" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            <option value="" th:selected="${stat == ''}">전체</option>
+            <option th:each="s : ${stats}" th:value="${s}" th:text="${s}" th:selected="${s == stat}">진행</option>
+        </select>
+        <span class="small text-secondary" th:text="|${projects.size()}건|">0건</span>
+    </form>
+
+    <div class="alert alert-light border" th:if="${projects.isEmpty()}">프로젝트가 없습니다.</div>
+
+    <div class="table-responsive" th:unless="${projects.isEmpty()}">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>프로젝트</th>
+                <th>상태</th>
+                <th style="min-width: 9rem">발주처 · 담당자</th>
+                <th class="text-nowrap">PM</th>
+                <th class="text-nowrap">기간</th>
+                <th class="text-nowrap">팀원 · 투입 중</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="p : ${projects}">
+                <td>
+                    <a th:href="@{/projects/{id}(id=${p.prjId})}" th:text="${p.prjNm}">프로젝트</a>
+                    <div class="small text-secondary" th:text="${p.prjId}">P26-000</div>
+                </td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${p.prjStat == '진행'} ? 'text-bg-primary' : (${p.prjStat == '지연'} ? 'text-bg-warning' : (${p.prjStat == '종료'} ? 'text-bg-secondary' : 'text-bg-danger'))"
+                          th:text="${p.prjStat}">진행</span>
+                </td>
+                <td>
+                    <div th:text="${p.clientNm}">발주처</div>
+                    <div class="small text-secondary" th:text="${p.mgrNm}">담당자</div>
+                </td>
+                <td class="text-nowrap" th:text="${p.pmEmpNm != null} ? ${p.pmEmpNm} : '-'">PM</td>
+                <td class="small text-nowrap">
+                    <div th:text="|${p.strtDt} ~ ${p.endDt != null ? p.endDt : p.schdEndDt}|">기간</div>
+                    <div class="text-secondary" th:if="${p.endDt == null}">(예정 종료)</div>
+                </td>
+                <td class="text-nowrap" th:text="|${p.memberCnt}명 · ${p.openHistCnt}명|">0명 · 0명</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
