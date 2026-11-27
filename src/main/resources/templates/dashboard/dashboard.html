@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('프로젝트 현황')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 경영 현황</nav>
+    <h1 class="h3">프로젝트 현황</h1>
+    <p class="text-secondary">수행 중인 프로젝트와 프로젝트별 투입 인원, 지금 투입된 직원의 직무와 투입 기간을 봅니다.</p>
+
+    <div class="row g-3 mb-4" th:with="s=${summary}">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card"><div class="label">진행 중</div><div class="value" th:text="${s.activeCnt}">0</div>
+                <div class="sub">프로젝트</div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card"><div class="label">지연</div><div class="value text-warning-emphasis" th:text="${s.delayedCnt}">0</div>
+                <div class="sub">예정 종료일 지남</div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card"><div class="label">투입 중인 개발직원</div>
+                <div class="value"><span th:text="${s.deployedCnt}">0</span><span class="fs-6 text-secondary" th:text="| / ${s.devCnt}명|"></span></div>
+                <div class="sub" th:text="|대기 ${s.benchCnt()}명|">대기</div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card"><div class="label">종료 · 중단</div>
+                <div class="value"><span th:text="${s.endedCnt}">0</span><span class="fs-6 text-secondary" th:text="| · ${s.stoppedCnt}|"></span></div>
+                <div class="sub">누적 프로젝트</div></div>
+        </div>
+    </div>
+
+    <h2 class="h5 mb-3">수행 중인 프로젝트 <span class="text-secondary fs-6" th:text="|${projects.size()}건|">0건</span></h2>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>프로젝트</th>
+                <th>상태</th>
+                <th>발주처 · PM</th>
+                <th style="min-width: 12rem">일정</th>
+                <th class="text-end">투입 중</th>
+            </tr>
+            </thead>
+            <tbody>
+            <th:block th:each="p : ${projects}">
+                <tr>
+                    <td>
+                        <div class="fw-semibold" th:text="${p.prjNm}">프로젝트</div>
+                        <div class="small text-secondary" th:text="${p.prjId}">P26-000</div>
+                    </td>
+                    <td><span class="badge" th:classappend="${p.prjStat == '지연'} ? 'text-bg-warning' : 'text-bg-primary'"
+                              th:text="${p.prjStat}">진행</span></td>
+                    <td>
+                        <div th:text="${p.clientNm}">발주처</div>
+                        <div class="small text-secondary" th:text="${p.pmNm != null} ? |PM ${p.pmNm}| : 'PM 없음'">PM</div>
+                    </td>
+                    <td>
+                        <div class="small" th:text="|${p.strtDt} ~ ${p.schdEndDt}|">기간</div>
+                        <div class="progress mt-1" style="height: 6px" role="progressbar"
+                             th:attr="aria-valuenow=${p.progress()}" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar" th:classappend="${p.prjStat == '지연'} ? 'bg-warning'"
+                                 th:style="|width: ${p.progress()}%|"></div>
+                        </div>
+                        <div class="small text-secondary" th:text="|일정 ${p.progress()}% 경과|">경과</div>
+                    </td>
+                    <td class="text-end">
+                        <div class="fw-semibold" th:text="|${p.curCnt}명|">0명</div>
+                        <div class="small text-secondary" th:text="|누적 ${p.totalCnt}명|">누적</div>
+                    </td>
+                </tr>
+                <tr class="member-row">
+                    <td colspan="5">
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="member-chip" th:each="m : ${members.get(p.prjId)}">
+                                <strong th:text="${m.roleId}">PM</strong>
+                                <span th:text="${m.empNm}">이름</span>
+                                <span class="text-secondary" th:text="|${m.grdNm != null ? m.grdNm : '등급 없음'} · ${m.strtDt}부터 ${m.days}일|">등급</span>
+                            </span>
+                            <span class="small text-secondary" th:if="${members.get(p.prjId) == null}">지금 투입된 직원이 없습니다.</span>
+                        </div>
+                    </td>
+                </tr>
+            </th:block>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

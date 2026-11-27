@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('인센티브 자료')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 경영 현황</nav>
+    <h1 class="h3">인센티브 자료</h1>
+    <p class="text-secondary">
+        인센티브 지급을 위한 기초 자료입니다. 재직 중인 개발직원별로 그 연도의 투입, 평가 점수, 교체 요청 이력을 모았습니다.
+        보정점수는 그 연도 보정회차가 확정됐을 때만 보입니다.
+    </p>
+
+    <form method="get" th:action="@{/incentives}" class="d-flex align-items-center gap-2 mb-3">
+        <label for="year" class="small text-secondary">연도</label>
+        <select id="year" name="year" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == year}">2026</option>
+        </select>
+        <span class="badge text-bg-success" th:if="${cnfmDt != null}" th:text="|${year} 회차 확정 ${cnfmDt}|">확정</span>
+        <span class="badge text-bg-warning" th:if="${cnfmDt == null and roundExists}" th:text="|${year} 회차 확정 전|">확정 전</span>
+        <span class="badge text-bg-secondary" th:if="${!roundExists}" th:text="|${year} 회차 없음|">회차 없음</span>
+        <span class="small text-secondary ms-auto" th:text="|${rows.size()}명|">0명</span>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>직원</th>
+                <th>등급</th>
+                <th class="text-end">참여 프로젝트</th>
+                <th class="text-end">투입 일수</th>
+                <th>직무</th>
+                <th class="text-end">평가 건수</th>
+                <th class="text-end">원점수 (PM·동료)</th>
+                <th class="text-end">보정점수</th>
+                <th class="text-end">고객평가</th>
+                <th class="text-end">교체 요청</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${rows}">
+                <td class="text-nowrap"><span th:text="${r.empNm}">이름</span>
+                    <span class="small text-secondary" th:text="${r.empId}">ID</span></td>
+                <td class="text-nowrap" th:text="${r.grdNm != null} ? ${r.grdNm} : '-'">등급</td>
+                <td class="text-end" th:text="${r.prjCnt}">0</td>
+                <td class="text-end" th:text="${r.deployDays}">0</td>
+                <td class="small text-nowrap" th:text="${r.roles != null} ? ${r.roles} : '-'">PG</td>
+                <td class="text-end" th:text="${r.evalCnt}">0</td>
+                <td class="text-end" th:text="${r.rawAvg != null} ? ${r.rawAvg} : '-'">0</td>
+                <td class="text-end fw-semibold">
+                    <span th:if="${r.adjAvg != null}" th:text="${r.adjAvg}">0</span>
+                    <span class="badge text-bg-warning" th:if="${r.adjAvg == null and r.rawAvg != null}">확정 전</span>
+                    <span class="text-secondary" th:if="${r.rawAvg == null}">-</span>
+                </td>
+                <td class="text-end" th:text="${r.custAvg != null} ? ${r.custAvg} : '-'">0</td>
+                <td class="text-end">
+                    <span class="badge text-bg-danger" th:if="${r.replCnt > 0}" th:text="|${r.replCnt}건|">1건</span>
+                    <span class="text-secondary" th:if="${r.replCnt == 0}">-</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

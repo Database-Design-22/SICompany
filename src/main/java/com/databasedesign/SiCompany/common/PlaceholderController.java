@@ -19,14 +19,7 @@ public class PlaceholderController {
     private final CurrentUserService currentUserService;
 
     @GetMapping({
-            // 공통
-            "/me", "/certificates",
-            // 인력 관리
-            "/certificates/issue",
-            // 경영 현황
-            "/dashboard", "/employees", "/incentives",
-            // 로그인 전
-            "/signup"
+            "/me", "/certificates", "/certificates/issue", "/employees", "/signup"
     })
     public String placeholder(HttpServletRequest request, Model model) {
         String path = request.getRequestURI();
