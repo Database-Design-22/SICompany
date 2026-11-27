@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('직원 관리')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 인력 관리</nav>
+    <h1 class="h3">직원 관리</h1>
+    <p class="text-secondary">직원을 골라 정보 수정, 기술등급 부여, 부서 변경, 퇴사 처리를 합니다. 주민등록번호는 보여 주지 않습니다.</p>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">처리했습니다.</div>
+
+    <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+        <form method="get" th:action="@{/staff}" class="d-flex flex-wrap align-items-end gap-2 me-auto">
+            <div>
+                <label class="form-label small mb-0" for="stat">재직상태</label>
+                <select class="form-select form-select-sm" id="stat" name="stat" onchange="this.form.submit()">
+                    <option value="" th:selected="${stat == ''}">전체</option>
+                    <option th:each="s : ${ {'재직','퇴사'} }" th:value="${s}" th:text="${s}" th:selected="${s == stat}">재직</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label small mb-0" for="q">이름 또는 직원ID</label>
+                <input class="form-control form-control-sm" id="q" name="q" th:value="${q}">
+            </div>
+            <button type="submit" class="btn btn-outline-secondary btn-sm">찾기</button>
+            <span class="small text-secondary" th:text="|${rows.size()}명|">0명</span>
+        </form>
+        <form method="post" th:action="@{/staff/destroy-pii}" class="d-flex align-items-center gap-2"
+              th:attr="data-confirm=|퇴사 3년이 지난 직원 ${piiTargetCnt}명의 주민등록번호, 이름, 연락처, 주소와 경력증명서 기재 값을 지웁니다. 되돌릴 수 없습니다. 실행할까요?|">
+            <span class="small text-secondary" th:text="|개인정보 파기 대상 ${piiTargetCnt}명|">대상</span>
+            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-shield-x"></i> 개인정보 파기 실행</button>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+            <tr><th>직원</th><th>구분 · 등급/부서</th><th>권한</th><th>입사 · 퇴사</th><th class="text-end">투입 중</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${rows}" th:classappend="${r.emplStat == '퇴사'} ? 'text-secondary'">
+                <td class="text-nowrap">
+                    <a class="fw-semibold" th:href="@{/staff/{id}(id=${r.empId})}"
+                       th:text="${r.empNm != null} ? ${r.empNm} : '(파기됨)'">이름</a>
+                    <div class="small text-secondary" th:text="${r.empId}">ID</div>
+                </td>
+                <td class="text-nowrap">
+                    <span th:text="${r.empDiv}">개발</span>
+                    <span class="small text-secondary"
+                          th:text="${r.empDiv == '개발'} ? |· ${r.grdNm != null ? r.grdNm : '등급 없음'}| : |· ${r.deptNm}|">등급</span>
+                </td>
+                <td class="text-nowrap" th:text="${r.authNm}">일반직원</td>
+                <td class="small text-nowrap">
+                    <span th:text="${r.hireDt}">입사</span>
+                    <span th:if="${r.rtrDt != null}" th:text="| ~ ${r.rtrDt}|">퇴사</span>
+                    <span class="badge text-bg-secondary" th:if="${r.dstrDt != null}">파기</span>
+                </td>
+                <td class="text-end" th:text="${r.openHistCnt > 0} ? |${r.openHistCnt}건| : '-'">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

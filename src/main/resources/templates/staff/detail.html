@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${staff.empNm != null ? staff.empNm : staff.empId})}"></head>
+<body>
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container py-4" th:with="s=${staff}">
+    <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / <a th:href="@{/staff}">직원 관리</a></nav>
+    <h1 class="h3">
+        <span th:text="${s.empNm != null} ? ${s.empNm} : '(개인정보 파기됨)'">이름</span>
+        <span class="fs-6 text-secondary" th:text="|${s.empId} · ${s.empDiv}직원 · ${s.authNm} · ${s.emplStat}|">ID</span>
+    </h1>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">처리했습니다.</div>
+    <div class="alert alert-secondary" th:unless="${s.active}"
+         th:text="|${s.rtrDt}에 퇴사한 직원입니다.${s.dstrDt != null ? ' ' + s.dstrDt + '에 개인정보를 파기했습니다.' : ''}|">퇴사</div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <form method="post" class="card mb-3" th:action="@{/staff/{id}/basic(id=${s.empId})}" th:if="${s.dstrDt == null}">
+                <div class="card-header">직원 정보 수정</div>
+                <div class="card-body row g-2">
+                    <div class="col-6">
+                        <label class="form-label small" for="empNm">이름</label>
+                        <input class="form-control form-control-sm" id="empNm" name="empNm" maxlength="50" th:value="${s.empNm}" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="engNm">영문이름</label>
+                        <input class="form-control form-control-sm" id="engNm" name="engNm" maxlength="100" th:value="${s.engNm}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small" for="lastEdu">최종학력</label>
+                        <select class="form-select form-select-sm" id="lastEdu" name="lastEdu">
+                            <option th:each="e : ${educations}" th:value="${e}" th:text="${e}" th:selected="${e == s.lastEdu}">학사</option>
+                        </select>
+                    </div>
+                    <div class="col-6 small text-secondary d-flex align-items-end">입사 <span class="ms-1" th:text="${s.hireDt}"></span></div>
+                    <div class="col-12"><button type="submit" class="btn btn-outline-primary btn-sm">저장</button></div>
+                </div>
+            </form>
+
+            <form method="post" class="card mb-3" th:action="@{/staff/{id}/grade(id=${s.empId})}" th:if="${s.dev}">
+                <div class="card-header">기술등급</div>
+                <div class="card-body d-flex gap-2 align-items-center">
+                    <select class="form-select form-select-sm w-auto" name="grdId">
+                        <option value="" th:selected="${s.grdId == null}">미부여</option>
+                        <option th:each="g : ${grades}" th:value="${g.id}" th:text="${g.name}" th:selected="${g.id == s.grdId}">고급</option>
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">저장</button>
+                </div>
+            </form>
+
+            <form method="post" class="card mb-3" th:action="@{/staff/{id}/dept(id=${s.empId})}" th:unless="${s.dev}">
+                <div class="card-header">부서</div>
+                <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                    <select class="form-select form-select-sm w-auto" name="deptId">
+                        <option th:each="d : ${depts}" th:value="${d.id}" th:text="${d.name}" th:selected="${d.id == s.deptId}">부서</option>
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">옮기기</button>
+                    <span class="small text-secondary" th:if="${s.authId == 'MGT'}">경영관리팀 권한이 있어 경영관리 부서 밖으로는 못 옮깁니다.</span>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-6" th:if="${s.active}">
+            <div class="card border-danger-subtle">
+                <div class="card-header text-danger"><i class="bi bi-box-arrow-right"></i> 퇴사 처리</div>
+                <div class="card-body">
+                    <p class="small mb-2">퇴사 처리하면 한 번에 다음이 함께 바뀝니다.</p>
+                    <ul class="small mb-3">
+                        <li>열린 투입 <strong th:text="|${impact.openHistCnt}건|">0건</strong>을 퇴사일자, 철수사유 '퇴사(RET)'로 닫습니다.</li>
+                        <li>이 직원이 평가자인 작성중 평가 <strong th:text="|${impact.draftEvalCnt}건|">0건</strong>을 점수·내용과 함께 지웁니다.</li>
+                        <li>이 직원이 쓴 평가메모 <strong th:text="|${impact.memoCnt}건|">0건</strong>을 지웁니다.</li>
+                    </ul>
+                    <div class="alert alert-warning small py-2" th:if="${impact.openReqCnt > 0}">
+                        이 직원의 투입에 접수된 교체 요청이 있어 먼저 처리해야 합니다.
+                    </div>
+                    <div class="small text-secondary mb-2" th:if="${impact.lastHistDate != null}"
+                         th:text="|퇴사일자는 마지막 투입 날짜(${impact.lastHistDate}) 이후여야 합니다.|">조건</div>
+                    <form method="post" class="d-flex gap-2" th:action="@{/staff/{id}/retire(id=${s.empId})}" th:unless="${isSelf}"
+                          th:attr="data-confirm=|${s.empNm}을(를) 퇴사 처리할까요? 되돌릴 수 없습니다.|">
+                        <input type="date" name="rtrDt" class="form-control form-control-sm w-auto" th:value="${today}" required>
+                        <button type="submit" class="btn btn-danger btn-sm">퇴사 처리</button>
+                    </form>
+                    <div class="small text-secondary" th:if="${isSelf}">본인은 퇴사 처리할 수 없습니다.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: sql}"></div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -70,6 +70,7 @@ public final class Menus {
                     new MenuItem("발주처 지정인력", "/designations", "발주처별 지명·제외 인력을 등록하고 해제한다.", "bi-person-check"),
                     new MenuItem("인력 배정", "/staffing", "프로젝트를 골라 배정 후보를 보고 직원을 투입한다.", "bi-people"),
                     new MenuItem("프로젝트 관리", "/projects", "프로젝트를 등록하고 투입·철수, 종료·중단을 처리한다.", "bi-folder2-open"),
+                    new MenuItem("직원 관리", "/staff", "직원 정보와 기술등급, 부서를 고치고 퇴사를 처리한다. 개인정보 파기를 실행한다.", "bi-person-gear"),
                     new MenuItem("합격자 명부", "/passers", "회원가입에 쓰는 합격자를 등록하고, 가입하지 않은 합격자를 지운다.", "bi-person-lines-fill"),
                     new MenuItem("경력증명서 발급", "/certificates/issue", "신청된 경력증명서를 확인하고 발급한다.", "bi-patch-check"))),
             new MenuGroup("경영 현황", Audience.EXE, List.of(
