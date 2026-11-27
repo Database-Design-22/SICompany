@@ -9,7 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.databasedesign.SiCompany.common.BusinessException;
 import com.databasedesign.SiCompany.common.CurrentUser;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.AsOfRow;
+import com.databasedesign.SiCompany.employee.EmployeeDtos.AuthTarget;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.CareerRow;
+import com.databasedesign.SiCompany.employee.EmployeeDtos.Code;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.EmployeeDetail;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.EmployeeRow;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.Grade;
@@ -107,6 +109,40 @@ public class EmployeeService {
         if (employeeRepository.deleteHoldSkill(skillId, user.empId()) != 1) {
             throw new BusinessException("보유기술에 없는 기술입니다. (" + skillId + ")");
         }
+    }
+
+    public List<Code> findAuths() {
+        return employeeRepository.findAuths();
+    }
+
+    /**
+     * 권한 변경 (경영진): 재직 중인 직원만. 본인 권한은 바꿀 수 없다 (경영진이 아무도 없게 되는 것을 막는다).
+     * - 경영관리팀(MGT): 경영관리 부서(MGT)의 비개발직원에게만 (제약 11)
+     * - 경영진(EXE): 비개발직원에게만 (개발직원은 프로젝트에 투입되는 인력이다)
+     * @return 대상 직원 이름
+     */
+    @Transactional
+    public String changeAuth(CurrentUser user, String empId, String authId) {
+        user.require(CurrentUser.EXE);
+        AuthTarget target = employeeRepository.findAuthTarget(empId)
+                .orElseThrow(() -> new BusinessException("직원을 찾을 수 없습니다. (" + empId + ")"));
+        if (!"재직".equals(target.emplStat())) {
+            throw new BusinessException("퇴사한 직원의 권한은 바꿀 수 없습니다.");
+        }
+        if (empId.equals(user.empId())) {
+            throw new BusinessException("본인 권한은 바꿀 수 없습니다.");
+        }
+        if (findAuths().stream().noneMatch(a -> a.id().equals(authId))) {
+            throw new BusinessException("권한은 일반직원, 경영관리팀, 경영진 중에서 고르세요.");
+        }
+        if ("MGT".equals(authId) && !("비개발".equals(target.empDiv()) && "MGT".equals(target.deptId()))) {
+            throw new BusinessException("경영관리팀 권한은 경영관리 부서의 비개발직원에게만 줄 수 있습니다.");
+        }
+        if ("EXE".equals(authId) && !"비개발".equals(target.empDiv())) {
+            throw new BusinessException("경영진 권한은 비개발직원에게만 줄 수 있습니다.");
+        }
+        employeeRepository.updateAuth(empId, authId);
+        return target.empNm();
     }
 
     public LocalDate parseDate(String text) {

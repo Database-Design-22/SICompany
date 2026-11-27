@@ -25,8 +25,23 @@
         </div>
     </div>
 
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}">바꿨습니다.</div>
+
     <div class="row g-3">
         <div class="col-lg-4">
+            <form method="post" class="card mb-3" th:action="@{/employees/{id}/auth(id=${emp.empId})}"
+                  th:if="${emp.emplStat == '재직' and !isSelf}"
+                  th:attr="data-confirm=|${emp.empNm}의 권한을 바꿀까요? 볼 수 있는 메뉴가 달라집니다.|">
+                <div class="card-header">권한</div>
+                <div class="card-body d-flex gap-2 align-items-center">
+                    <select class="form-select form-select-sm w-auto" name="authId">
+                        <option th:each="a : ${auths}" th:value="${a.id}" th:text="${a.name}"
+                                th:selected="${a.name == emp.authNm}">권한</option>
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">바꾸기</button>
+                </div>
+                <div class="card-body pt-0 small text-secondary">경영관리팀은 경영관리 부서 비개발직원, 경영진은 비개발직원에게만 줄 수 있습니다.</div>
+            </form>
             <div class="card mb-3">
                 <div class="card-header">기본 정보</div>
                 <div class="card-body small">

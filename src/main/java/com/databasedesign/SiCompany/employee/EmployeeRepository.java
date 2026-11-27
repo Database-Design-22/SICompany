@@ -8,7 +8,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.databasedesign.SiCompany.employee.EmployeeDtos.AsOfRow;
+import com.databasedesign.SiCompany.employee.EmployeeDtos.AuthTarget;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.CareerRow;
+import com.databasedesign.SiCompany.employee.EmployeeDtos.Code;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.EmployeeDetail;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.EmployeeRow;
 import com.databasedesign.SiCompany.employee.EmployeeDtos.Grade;
@@ -115,6 +117,28 @@ public class EmployeeRepository {
             SELECT GRD_ID, GRD_NM
             FROM TB_SKILL_GRD
             ORDER BY FIELD(GRD_ID, 'JR', 'MD', 'SR', 'EX')
+            """;
+
+    /** 권한 변경 ①: 권한 목록 */
+    public static final String FIND_AUTHS = """
+            SELECT AUTH_ID, AUTH_NM
+            FROM TB_AUTH
+            ORDER BY FIELD(AUTH_ID, 'EMP', 'MGT', 'EXE')
+            """;
+
+    /** 권한 변경 ②: 대상 직원의 구분, 재직상태, 부서 (경영관리팀 권한은 경영관리 부서 비개발직원에게만) */
+    public static final String FIND_AUTH_TARGET = """
+            SELECT e.EMP_ID, e.EMP_NM, e.EMP_DIV, e.EMPL_STAT, e.AUTH_ID, n.DEPT_ID
+            FROM TB_EMP e
+            LEFT JOIN TB_NDEV_EMP n ON n.EMP_ID = e.EMP_ID
+            WHERE e.EMP_ID = ?
+            """;
+
+    /** 권한 변경 ③ (재직 중일 때만 바뀐다) */
+    public static final String UPDATE_AUTH = """
+            UPDATE TB_EMP
+            SET AUTH_ID = ?
+            WHERE EMP_ID = ? AND EMPL_STAT = '재직'
             """;
 
     /** 내 정보 수정 ①: 전화번호, 주소 */
@@ -247,5 +271,23 @@ public class EmployeeRepository {
 
     public int deleteHoldSkill(int skillId, String empId) {
         return jdbcTemplate.update(DELETE_HOLD_SKILL, skillId, empId);
+    }
+
+    public List<Code> findAuths() {
+        return jdbcTemplate.query(FIND_AUTHS, (rs, i) -> new Code(rs.getString("AUTH_ID"), rs.getString("AUTH_NM")));
+    }
+
+    public Optional<AuthTarget> findAuthTarget(String empId) {
+        return jdbcTemplate.query(FIND_AUTH_TARGET, (rs, i) -> new AuthTarget(
+                rs.getString("EMP_ID"),
+                rs.getString("EMP_NM"),
+                rs.getString("EMP_DIV"),
+                rs.getString("EMPL_STAT"),
+                rs.getString("AUTH_ID"),
+                rs.getString("DEPT_ID")), empId).stream().findFirst();
+    }
+
+    public int updateAuth(String empId, String authId) {
+        return jdbcTemplate.update(UPDATE_AUTH, authId, empId);
     }
 }

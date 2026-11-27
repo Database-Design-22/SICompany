@@ -54,11 +54,25 @@ public class EmployeeController {
         model.addAttribute("emp", employeeService.getEmployee(empId));
         model.addAttribute("skills", employeeService.findHoldSkills(empId));
         model.addAttribute("career", employeeService.findCareer(empId));
+        model.addAttribute("auths", employeeService.findAuths());
+        model.addAttribute("isSelf", empId.equals(user.empId()));
         model.addAttribute("executedSqls", List.of(
                 new ExecutedSql("직원 한 명 (주민등록번호 제외)", EmployeeRepository.FIND_EMPLOYEE),
                 new ExecutedSql("보유기술", EmployeeRepository.FIND_HOLD_SKILLS),
-                new ExecutedSql("투입 이력", EmployeeRepository.FIND_CAREER)));
+                new ExecutedSql("투입 이력", EmployeeRepository.FIND_CAREER),
+                new ExecutedSql("권한 변경 ①: 권한 목록", EmployeeRepository.FIND_AUTHS),
+                new ExecutedSql("권한 변경 ②: 대상 직원 (구분, 부서)", EmployeeRepository.FIND_AUTH_TARGET),
+                new ExecutedSql("권한 변경 ③", EmployeeRepository.UPDATE_AUTH)));
         return "employee/detail";
+    }
+
+    /** 권한 변경 (경영진) */
+    @PostMapping("/employees/{empId}/auth")
+    public String changeAuth(@PathVariable String empId, @RequestParam(required = false) String authId,
+                             CurrentUser user, RedirectAttributes redirect) {
+        String empNm = employeeService.changeAuth(user, empId, authId);
+        redirect.addFlashAttribute("notice", empNm + "의 권한을 바꿨습니다.");
+        return "redirect:/employees/" + empId;
     }
 
     /** 특정 시점 참여 이력: 그 날짜에 누가 어느 프로젝트에 어떤 직무로 있었는지 */

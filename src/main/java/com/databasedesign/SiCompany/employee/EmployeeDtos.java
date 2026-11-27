@@ -43,4 +43,12 @@ public final class EmployeeDtos {
     /** 검색 조건 (빈 값은 null) */
     public record SearchCond(String keyword, String empDiv, String grdId, Integer skillId, String emplStat) {
     }
+
+    /** 코드와 이름 (권한 목록) */
+    public record Code(String id, String name) {
+    }
+
+    /** 권한 변경 대상 */
+    public record AuthTarget(String empId, String empNm, String empDiv, String emplStat, String authId, String deptId) {
+    }
 }
