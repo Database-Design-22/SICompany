@@ -13,6 +13,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import com.databasedesign.SiCompany.project.ProjectDtos.ClientManager;
 import com.databasedesign.SiCompany.project.ProjectDtos.EvalCount;
 import com.databasedesign.SiCompany.project.ProjectDtos.EvalPair;
 import com.databasedesign.SiCompany.project.ProjectDtos.MemberHist;
@@ -27,7 +28,7 @@ public class ProjectRepository {
     /** 1. 프로젝트 목록 (상태로 거르기, 전체면 NULL. 진행·지연이 먼저) */
     public static final String FIND_PROJECTS = """
             SELECT p.PRJ_ID, p.PRJ_NM, p.STRT_DT, p.SCHD_END_DT, p.END_DT, p.PRJ_STAT,
-                   c.CLIENT_NM, m.MGR_NM,
+                   p.CLIENT_ID, c.CLIENT_NM, p.MGR_ID, m.MGR_NM,
                    pm.EMP_ID AS PM_EMP_ID, pe.EMP_NM AS PM_EMP_NM,
                    (SELECT COUNT(*) FROM TB_PRJ_PTCP x
                     WHERE x.PRJ_ID = p.PRJ_ID) AS MEMBER_CNT,
@@ -45,7 +46,7 @@ public class ProjectRepository {
     /** 2. 프로젝트 한 건 (1번과 같은 열) */
     public static final String FIND_PROJECT = """
             SELECT p.PRJ_ID, p.PRJ_NM, p.STRT_DT, p.SCHD_END_DT, p.END_DT, p.PRJ_STAT,
-                   c.CLIENT_NM, m.MGR_NM,
+                   p.CLIENT_ID, c.CLIENT_NM, p.MGR_ID, m.MGR_NM,
                    pm.EMP_ID AS PM_EMP_ID, pe.EMP_NM AS PM_EMP_NM,
                    (SELECT COUNT(*) FROM TB_PRJ_PTCP x
                     WHERE x.PRJ_ID = p.PRJ_ID) AS MEMBER_CNT,
@@ -79,6 +80,46 @@ public class ProjectRepository {
             WHERE PRJ_ID = ?
             GROUP BY EVAL_DIV, EVAL_STAT
             ORDER BY FIELD(EVAL_DIV, 'PM', '동료', '고객'), EVAL_STAT
+            """;
+
+    /** 등록·수정 ①: 발주처 담당자 목록 (프로젝트의 발주처는 고른 담당자의 발주처로 정해진다) */
+    public static final String FIND_CLIENT_MANAGERS = """
+            SELECT c.CLIENT_ID, c.CLIENT_NM, m.MGR_ID, m.MGR_NM
+            FROM TB_CLIENT_MGR m
+            JOIN TB_CLIENT c ON c.CLIENT_ID = m.CLIENT_ID
+            ORDER BY c.CLIENT_NM, m.MGR_NM
+            """;
+
+    /** 등록 ②: 프로젝트ID 'PYY-NNN'의 다음 일련번호 (YY = 시작일자 연도). 같은 연도 행을 잠가 번호 중복을 막는다 */
+    public static final String NEXT_PRJ_SEQ = """
+            SELECT COALESCE(MAX(CAST(SUBSTRING(PRJ_ID, 5) AS UNSIGNED)), 0) + 1
+            FROM TB_PRJ
+            WHERE PRJ_ID LIKE ?
+            FOR UPDATE
+            """;
+
+    /** 등록 ③: 프로젝트 생성 (상태 '진행') */
+    public static final String INSERT_PROJECT = """
+            INSERT INTO TB_PRJ (PRJ_ID, PRJ_NM, STRT_DT, SCHD_END_DT, END_DT, PRJ_STAT, CLIENT_ID, MGR_ID)
+            VALUES (?, ?, ?, ?, NULL, '진행', ?, ?)
+            """;
+
+    /** 수정 ①: 첫 투입 시작일 (프로젝트 시작일은 이 날짜보다 늦을 수 없다) */
+    public static final String FIND_FIRST_HIST_STRT = """
+            SELECT MIN(STRT_DT)
+            FROM TB_PRJ_HIST
+            WHERE PRJ_ID = ?
+            """;
+
+    /**
+     * 수정 ②: 프로젝트명, 시작일자, 예정종료일자, 담당자 (발주처는 그대로).
+     * 예정종료일자가 오늘 이전이면 '지연', 오늘 이후로 늦추면 '진행'으로 되돌린다 (진행·지연일 때만 바뀐다)
+     */
+    public static final String UPDATE_PROJECT = """
+            UPDATE TB_PRJ
+            SET PRJ_NM = ?, STRT_DT = ?, SCHD_END_DT = ?, MGR_ID = ?,
+                PRJ_STAT = CASE WHEN ? < CURDATE() THEN '지연' ELSE '진행' END
+            WHERE PRJ_ID = ? AND PRJ_STAT IN ('진행', '지연')
             """;
 
     /** 5. 검사: 종료일자는 모든 투입의 시작일자와 이미 닫힌 종료일자 이후여야 한다 */
@@ -194,6 +235,33 @@ public class ProjectRepository {
                 rs.getInt("CNT")), prjId);
     }
 
+    public List<ClientManager> findClientManagers() {
+        return jdbcTemplate.query(FIND_CLIENT_MANAGERS, (rs, i) -> new ClientManager(
+                rs.getInt("CLIENT_ID"),
+                rs.getString("CLIENT_NM"),
+                rs.getInt("MGR_ID"),
+                rs.getString("MGR_NM")));
+    }
+
+    /** @param prefix 예: 'P26-' */
+    public int nextPrjSeq(String prefix) {
+        Integer seq = jdbcTemplate.queryForObject(NEXT_PRJ_SEQ, Integer.class, prefix + "%");
+        return seq == null ? 1 : seq;
+    }
+
+    public void insertProject(String prjId, String prjNm, LocalDate strtDt, LocalDate schdEndDt, int clientId, int mgrId) {
+        jdbcTemplate.update(INSERT_PROJECT, prjId, prjNm, strtDt, schdEndDt, clientId, mgrId);
+    }
+
+    /** @return 투입 이력이 없으면 null */
+    public LocalDate findFirstHistStrt(String prjId) {
+        return jdbcTemplate.queryForObject(FIND_FIRST_HIST_STRT, LocalDate.class, prjId);
+    }
+
+    public int updateProject(String prjId, String prjNm, LocalDate strtDt, LocalDate schdEndDt, int mgrId) {
+        return jdbcTemplate.update(UPDATE_PROJECT, prjNm, strtDt, schdEndDt, mgrId, schdEndDt, prjId);
+    }
+
     /** @return 투입 이력이 없으면 null */
     public LocalDate findLastHistDate(String prjId) {
         return jdbcTemplate.queryForObject(FIND_LAST_HIST_DATE, LocalDate.class, prjId);
@@ -258,7 +326,9 @@ public class ProjectRepository {
                 rs.getObject("SCHD_END_DT", LocalDate.class),
                 rs.getObject("END_DT", LocalDate.class),
                 rs.getString("PRJ_STAT"),
+                rs.getInt("CLIENT_ID"),
                 rs.getString("CLIENT_NM"),
+                rs.getInt("MGR_ID"),
                 rs.getString("MGR_NM"),
                 rs.getString("PM_EMP_ID"),
                 rs.getString("PM_EMP_NM"),

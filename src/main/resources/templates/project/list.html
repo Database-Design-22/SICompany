@@ -7,7 +7,37 @@
 <main class="container py-4">
     <nav class="small text-secondary mb-1"><a th:href="@{/}">홈</a> / 인력 관리</nav>
     <h1 class="h3">프로젝트 관리</h1>
-    <p class="text-secondary">프로젝트를 고르면 팀원과 투입 이력을 보고 종료·중단을 처리할 수 있습니다.</p>
+    <p class="text-secondary">프로젝트를 고르면 팀원과 투입 이력을 보고 수정·종료·중단을 처리할 수 있습니다.</p>
+
+    <details class="card card-body mb-3">
+        <summary class="fw-semibold">프로젝트 등록</summary>
+        <form method="post" th:action="@{/projects}" class="row g-2 mt-1">
+            <div class="col-md-5">
+                <label for="prjNm" class="form-label small">프로젝트명</label>
+                <input id="prjNm" name="prjNm" class="form-control" maxlength="100" required>
+            </div>
+            <div class="col-md-7">
+                <label for="mgrKey" class="form-label small">발주처 · 담당자 (발주처는 담당자의 발주처로 정해집니다)</label>
+                <select id="mgrKey" name="mgrKey" class="form-select" required>
+                    <option value="">-- 담당자를 고르세요 --</option>
+                    <option th:each="m : ${managers}" th:value="|${m.clientId}-${m.mgrId}|"
+                            th:text="|${m.clientNm} · ${m.mgrNm}|">발주처 · 담당자</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label for="strtDt" class="form-label small">시작일자</label>
+                <input id="strtDt" name="strtDt" type="date" class="form-control" required>
+            </div>
+            <div class="col-6 col-md-3">
+                <label for="schdEndDt" class="form-label small">예정종료일자</label>
+                <input id="schdEndDt" name="schdEndDt" type="date" class="form-control" required>
+            </div>
+            <div class="col-12 small text-secondary">
+                프로젝트ID는 'P' + 시작일자 연도 두 자리 + 일련번호(예: P26-014)로 자동으로 붙고, 상태는 '진행'입니다.
+            </div>
+            <div class="col-12"><button type="submit" class="btn btn-primary btn-sm">등록</button></div>
+        </form>
+    </details>
 
     <form method="get" th:action="@{/projects}" class="d-flex gap-2 align-items-center mb-3">
         <label for="stat" class="small text-secondary">상태</label>

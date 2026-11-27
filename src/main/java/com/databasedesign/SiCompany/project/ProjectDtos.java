@@ -12,7 +12,7 @@ public final class ProjectDtos {
 
     /** 프로젝트 한 줄 (목록, 상세 공통). PM이 없으면 pmEmpId가 null */
     public record ProjectRow(String prjId, String prjNm, LocalDate strtDt, LocalDate schdEndDt, LocalDate endDt,
-                             String prjStat, String clientNm, String mgrNm,
+                             String prjStat, int clientId, String clientNm, int mgrId, String mgrNm,
                              String pmEmpId, String pmEmpNm, int memberCnt, int openHistCnt) {
         /** 종료·중단 처리를 할 수 있는 상태인지 */
         public boolean isActive() {
@@ -31,6 +31,10 @@ public final class ProjectDtos {
 
     /** 이 프로젝트의 평가 수 (평가구분, 상태별) */
     public record EvalCount(String evalDiv, String evalStat, int cnt) {
+    }
+
+    /** 발주처 담당자 (등록·수정 화면의 선택 목록) */
+    public record ClientManager(int clientId, String clientNm, int mgrId, String mgrNm) {
     }
 
     /** 종료·중단 처리 결과 */

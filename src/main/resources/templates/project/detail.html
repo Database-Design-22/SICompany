@@ -35,6 +35,34 @@
                 <button type="submit" class="btn btn-outline-danger">중단</button>
             </form>
         </div>
+        <details class="mt-3" th:if="${project.active}">
+            <summary class="small">기본 정보 수정</summary>
+            <form method="post" th:action="@{/projects/{id}/edit(id=${project.prjId})}" class="row g-2 mt-1">
+                <div class="col-md-6">
+                    <label for="prjNm" class="form-label small">프로젝트명</label>
+                    <input id="prjNm" name="prjNm" class="form-control" maxlength="100" th:value="${project.prjNm}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="mgrId" class="form-label small" th:text="|담당자 (발주처 ${project.clientNm}는 바꿀 수 없습니다)|">담당자</label>
+                    <select id="mgrId" name="mgrId" class="form-select" required>
+                        <option th:each="m : ${managers}" th:value="${m.mgrId}" th:text="${m.mgrNm}"
+                                th:selected="${m.mgrId == project.mgrId}">담당자</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="strtDt" class="form-label small">시작일자</label>
+                    <input id="strtDt" name="strtDt" type="date" class="form-control" th:value="${project.strtDt}" required>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="schdEndDt" class="form-label small">예정종료일자</label>
+                    <input id="schdEndDt" name="schdEndDt" type="date" class="form-control" th:value="${project.schdEndDt}" required>
+                </div>
+                <div class="col-12 small text-secondary">
+                    예정종료일자가 오늘 이전이면 '지연', 오늘 이후면 '진행'이 됩니다. 시작일자는 첫 투입 시작일보다 늦을 수 없습니다.
+                </div>
+                <div class="col-12"><button type="submit" class="btn btn-outline-primary btn-sm">저장</button></div>
+            </form>
+        </details>
         <div class="small text-secondary mt-3" th:unless="${project.active}"
              th:text="|${project.prjStat}된 프로젝트입니다. 상태를 되돌릴 수 없습니다.|">종료된 프로젝트입니다.</div>
     </div>

@@ -13,12 +13,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.databasedesign.SiCompany.common.CurrentUser;
 import com.databasedesign.SiCompany.common.ExecutedSql;
 import com.databasedesign.SiCompany.project.ProjectDtos.CloseResult;
+import com.databasedesign.SiCompany.project.ProjectDtos.ProjectRow;
 
 import lombok.RequiredArgsConstructor;
 
 /**
  * 프로젝트 관리 (경영관리팀만)
- * 프로젝트 목록 → 상세(팀원·투입 이력, 평가 수) → 종료(평가 행 생성) / 중단(평가메모 삭제)
+ * 프로젝트 목록·등록 → 상세·수정(팀원·투입 이력, 평가 수) → 종료(평가 행 생성) / 중단(평가메모 삭제)
  */
 @Controller
 @RequiredArgsConstructor
@@ -33,21 +34,57 @@ public class ProjectController {
         model.addAttribute("stats", ProjectService.STATS);
         model.addAttribute("stat", prjStat == null ? "" : prjStat);
         model.addAttribute("projects", projectService.findProjects(prjStat));
+        model.addAttribute("managers", projectService.findClientManagers());
         model.addAttribute("executedSqls", List.of(
-                new ExecutedSql("프로젝트 목록 (PM, 팀원 수, 열린 투입 수)", ProjectRepository.FIND_PROJECTS)));
+                new ExecutedSql("프로젝트 목록 (PM, 팀원 수, 열린 투입 수)", ProjectRepository.FIND_PROJECTS),
+                new ExecutedSql("등록 ①: 발주처 담당자 목록", ProjectRepository.FIND_CLIENT_MANAGERS),
+                new ExecutedSql("등록 ②: 다음 프로젝트ID 일련번호 (잠금)", ProjectRepository.NEXT_PRJ_SEQ),
+                new ExecutedSql("등록 ③: 프로젝트 생성", ProjectRepository.INSERT_PROJECT)));
         return "project/list";
+    }
+
+    @PostMapping("/projects")
+    public String register(@RequestParam(required = false) String prjNm,
+                           @RequestParam(required = false) String strtDt,
+                           @RequestParam(required = false) String schdEndDt,
+                           @RequestParam(required = false) String mgrKey,
+                           CurrentUser user, RedirectAttributes redirect) {
+        user.require(CurrentUser.MGT);
+        String prjId = projectService.register(prjNm, strtDt, schdEndDt, mgrKey);
+        redirect.addFlashAttribute("notice", "프로젝트 " + prjId + "을(를) '진행' 상태로 등록했습니다."
+                + " 인력 배정 메뉴에서 PM과 팀원을 배정하세요.");
+        return "redirect:/projects/" + prjId;
+    }
+
+    @PostMapping("/projects/{prjId}/edit")
+    public String update(@PathVariable String prjId,
+                         @RequestParam(required = false) String prjNm,
+                         @RequestParam(required = false) String strtDt,
+                         @RequestParam(required = false) String schdEndDt,
+                         @RequestParam(required = false) Integer mgrId,
+                         CurrentUser user, RedirectAttributes redirect) {
+        user.require(CurrentUser.MGT);
+        projectService.update(prjId, prjNm, strtDt, schdEndDt, mgrId);
+        ProjectRow project = projectService.getProject(prjId);
+        redirect.addFlashAttribute("notice", prjId + "을(를) 고쳤습니다. 현재 상태: " + project.prjStat());
+        return "redirect:/projects/" + prjId;
     }
 
     @GetMapping("/projects/{prjId}")
     public String detail(@PathVariable String prjId, CurrentUser user, Model model) {
         user.require(CurrentUser.MGT);
-        model.addAttribute("project", projectService.getProject(prjId));
+        ProjectRow project = projectService.getProject(prjId);
+        model.addAttribute("project", project);
+        model.addAttribute("managers", projectService.findClientManagers(project.clientId()));
         model.addAttribute("hists", projectService.findMemberHists(prjId));
         model.addAttribute("evalCounts", projectService.findEvalCounts(prjId));
         model.addAttribute("executedSqls", List.of(
                 new ExecutedSql("프로젝트 한 건", ProjectRepository.FIND_PROJECT),
                 new ExecutedSql("팀원과 투입 이력", ProjectRepository.FIND_MEMBER_HISTS),
                 new ExecutedSql("이 프로젝트의 평가 수", ProjectRepository.FIND_EVAL_COUNTS),
+                new ExecutedSql("수정 ①: 발주처 담당자 목록", ProjectRepository.FIND_CLIENT_MANAGERS),
+                new ExecutedSql("수정 ②: 첫 투입 시작일", ProjectRepository.FIND_FIRST_HIST_STRT),
+                new ExecutedSql("수정 ③: 프로젝트 수정 (예정종료일자로 진행·지연 결정)", ProjectRepository.UPDATE_PROJECT),
                 new ExecutedSql("종료·중단 검사 ①: 마지막 투입 날짜", ProjectRepository.FIND_LAST_HIST_DATE),
                 new ExecutedSql("종료·중단 검사 ②: 처리하지 않은 교체 요청", ProjectRepository.COUNT_OPEN_REPL_REQUESTS),
                 new ExecutedSql("종료 ①: 프로젝트 '종료'", ProjectRepository.END_PROJECT),
